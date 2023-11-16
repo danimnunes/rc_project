@@ -4,41 +4,41 @@ int loginUser(){
     return 0;
 }
 int logoutUser(){
-    return 1;
+    return 0;
 }
 int requestMyAuctions(){
-    return 2;
+    return 0;
 }
 int requestAuctionsBids(){
-    return 3;
+    return 0;
 }
 int requestAuctions(){
-    return 4;
+    return 0;
 }
 int checkUserExists(){
-    return 5;
+    return 0;
 }
 int checkUserLogged(){
-    return 6; 
+    return 0; 
 }
 int checkUserExistsLogged(){
-    return 7;
+    return 0;
 }
 int checkMyAuctions(){
-    return 8;
+    return 0;
 }
 int checkAuctionsBids(){
-    return 9;
+    return 0;
 }
 int checkAuctions(){
-    return 10;
+    return 0;
 }
 int detailedAuction(){
-    return 11;
+    return 0;
 }
 int requestRecord(){
-    return 12;
+    return 0;
 }
 int unregisterUsed(){
-    return 13;
+    return 0;
 }
