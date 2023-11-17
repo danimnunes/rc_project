@@ -26,13 +26,97 @@ struct addrinfo hints, *res;
 struct sockaddr_in addr;
 char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
 
+char possible_inputs[][4] = {"LIN", "RLI", "LOU", "RLO", "UNR", "RUR", "LMA", "RMA", "LMB", "RMB", "LST", "RLS", "SRC", "RRC"};
+char input_l[][4] = {"LIN", "LOU", "LMA", "LMB", "LST"};
+char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC"};
+
+void check_action(char buffer) {
+
+    // Assume buffer contains some data
+    if (strncmp(buffer, "L", 1) == 0) {
+        // Determine the action based on the matched string
+        for (int i = 0; i < sizeof(input_l) / sizeof(input_l[0]); i++) {
+            switch (i) {
+                case 0: //LIN
+                    loginUser();
+                    break;
+                case 1: //LOU
+                    logoutUser();
+                    break;
+                case 2: //LMA
+                    requestMyAuctions();
+                    break;
+                case 3: //LMB
+                    requestAuctionsBids();
+                    break;  
+                case 4: //LST
+                    requestAuctions();
+                    break;  
+                // Add more cases for other matches
+
+                default:
+                    perror("invalid input");
+                    exit(EXIT_FAILURE);
+                    // Handle default case if needed
+                    break;
+            }
+        }
+    }
+
+    else if (strncmp(buffer, "R", 1) == 0) {
+        // Determine the action based on the matched string
+        for (int i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
+            switch (i) {
+                case 0: //RLI
+                    checkUserExists();
+                    break;
+                case 1: //RLO
+                    checkUserLogged();
+                    break;
+                case 2: //RUR
+                    checkUserExistsLogged();
+                    break;
+                case 3: //RMA
+                    checkMyAuctions();
+                    break;
+                case 4: //RMB
+                    checkAuctionsBids();
+                    break;
+                case 5: //RLS
+                    checkAuctions();
+                    break;
+                case 6: //RRC
+                    detailedAuction();
+                    break;
+                // Add more cases for other matches
+
+                default:
+                    perror("invalid input");
+                    exit(EXIT_FAILURE);
+                    // Handle default case if needed
+                    break;
+            }
+        }
+    }
+    
+    //starts with other character than L or R
+    else if(strncmp(buffer, "SRC", 3) == 0){ 
+        requestRecord();
+    }
+    else if(strncmp(buffer, "UNR", 3) == 0){ 
+        unregisterUsed();
+        
+    }else{
+        perror("invalid input");
+        exit(EXIT_FAILURE);
+    }
+    
+}
 
 int main() {
     fd_set inputs, newfds;
     int max_fd = STDIN_FILENO;
-    char possible_inputs[][4] = {"LIN", "RLI", "LOU", "RLO", "UNR", "RUR", "LMA", "RMA", "LMB", "RMB", "LST", "RLS", "SRC", "RRC"};
-    char input_l[][4] = {"LIN", "LOU", "LMA", "LMB", "LST"};
-    char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC"};
+
 
     // podemos ler so a primeira letra e depois comparar com o array dessa letra, para reduzir as comparações, ou comparar com todas simplesmente
 
@@ -60,85 +144,9 @@ int main() {
                 perror("fgets");
                 exit(EXIT_FAILURE);
             }
-            // Assume buffer contains some data
-            if (strncmp(buffer, "L", 1) == 0) {
-                // Determine the action based on the matched string
-                for (int i = 0; i < sizeof(input_l) / sizeof(input_l[0]); i++) {
-            // Using strncmp to compare the first three characters of buffer with compareStrings[i]
-                    switch (i) {
-                        case 0: //LIN
-                            loginUser();
-                            break;
-                        case 1: //LOU
-                            logoutUser();
-                            break;
-                        case 2: //LMA
-                            requestMyAuctions();
-                            break;
-                        case 3: //LMB
-                            requestAuctionsBids();
-                            break;  
-                        case 4: //LST
-                            requestAuctions();
-                            break;  
-                        // Add more cases for other matches
 
-                        default:
-                            perror("invalid input");
-                            exit(EXIT_FAILURE);}
-                            // Handle default case if needed
-                            break;
-                    }
-                }
-            
+            check_action(buffer);
 
-            else if (strncmp(buffer, "R", 1) == 0) {
-                // Determine the action based on the matched string
-                for (int i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
-            // Using strncmp to compare the first three characters of buffer with compareStrings[i]
-                    switch (i) {
-                        case 0: //RLI
-                            checkUserExists();
-                            break;
-                        case 1: //RLO
-                            checkUserLogged();
-                            break;
-                        case 2: //RUR
-                            checkUserExistsLogged();
-                            break;
-                        case 3: //RMA
-                            checkMyAuctions();
-                            break;
-                        case 4: //RMB
-                            checkAuctionsBids();
-                            break;
-                        case 5: //RLS
-                            checkAuctions();
-                            break;
-                        case 6: //RRC
-                            detailedAuction();
-                            break;
-                        // Add more cases for other matches
-
-                        default:
-                            perror("invalid input");
-                            exit(EXIT_FAILURE);}
-                            // Handle default case if needed
-                            break;
-                }
-            }
-            
-            //starts with other character than L or R
-            else if(strncmp(buffer, "SRC", 3) == 0){ 
-                requestRecord();
-            }
-            else if(strncmp(buffer, "UNR", 3) == 0){ 
-                unregisterUsed();
-                
-            }else{
-                perror("invalid input");
-                exit(EXIT_FAILURE);
-            }
         }
             
 
