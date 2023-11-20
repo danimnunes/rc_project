@@ -12,6 +12,7 @@
 #define PORT "58011"
 
 int udp_fd;
+int novo;
 int tcp_fd;
 ssize_t n;
 socklen_t udp_addrlen;
