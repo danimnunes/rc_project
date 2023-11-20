@@ -12,6 +12,7 @@
 #define PORT "58001"
 
 int udp_fd;
+int tcp_fd;
 ssize_t n;
 socklen_t udp_addrlen;
 struct addrinfo udp_hints, *udp_res;
@@ -43,7 +44,9 @@ void udp_server() {
 
     while (1) {
         FD_ZERO(&all_fds_read);
+        FD_SET(STDIN_FILENO, &all_fds_read); 
         FD_SET(udp_fd, &all_fds_read);
+        FD_SET(tcp_fd, &all_fds_read);
         max_fd_udp = udp_fd;
 
         if (select(max_fd_udp + 1, &all_fds_read, NULL, NULL, NULL) < 0) {
@@ -64,7 +67,16 @@ void udp_server() {
             }
         }
 
-        /* É mais ou menos isto agora só falta um if como o de cima para o fileno e para o TCP*/
+        // Placeholder for handling TCP connections
+        if (FD_ISSET(tcp_fd, &all_fds_read)) {
+            // Handle TCP input here
+            // You will need to implement TCP connection handling
+        }
+
+        // Placeholder for handling stdin
+        if (FD_ISSET(STDIN_FILENO, &all_fds_read)) {
+            // Handle stdin input here
+        }
     }
     freeaddrinfo(udp_res);
     close(udp_fd);
