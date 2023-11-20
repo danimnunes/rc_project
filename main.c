@@ -9,7 +9,7 @@
 #include <string.h>
 #include "aux.h"
 
-#define PORT "59001"
+#define PORT "58011"
 #define IP "193.136.138.142"
 
 int fd, errcode;
