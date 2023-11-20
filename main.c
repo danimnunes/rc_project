@@ -26,9 +26,9 @@ struct addrinfo hints, *res;
 struct sockaddr_in addr;
 char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
 
-char tcp_input[][4] = {"ROA", "RCL", "RSA", "RBD", "OPA", "CLS", "SAS", "BID"};
-char input_l[][4] = {"LIN", "LOU", "LMA", "LMB", "LST"};
-char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC", "ROA", "RCL", "RSA", "RBD"};
+char tcp_input[][11] = {"open", "close", "show_asset", "bid"};
+/*char input_l[][4] = {"login", "logout", "myauctions", "mybids", "list"};
+char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC", "ROA", "RCL", "RSA", "RBD"};*/
 
 void send_message(char buffer[]){
     printf("%s", buffer);
@@ -44,7 +44,7 @@ void send_message(char buffer[]){
     hints.ai_family = AF_INET;      // IPv4
     hints.ai_socktype = SOCK_DGRAM; // UDP socket
 
-    /* Busca informação do host "localhost", na porta especificada,
+    /* Busca informação do host "tejo.tecnico.ulisboa.pt", na porta especificada,
     guardando a informação nas `hints` e na `res`. Caso o host seja um nome
     e não um endereço IP (como é o caso), efetua um DNS Lookup. */
     errcode = getaddrinfo("tejo.tecnico.ulisboa.pt", PORT, &hints, &res);
@@ -52,7 +52,7 @@ void send_message(char buffer[]){
         exit(1);
     }
 
-    /* Envia para o `fd` (socket) a mensagem "Hello!\n" com o tamanho 7.
+    /* Envia para o `fd` (socket) a mensagem "Hello!\n" com o tamanho 20.
        Não são passadas flags (0), e é passado o endereço de destino.
        É apenas aqui criada a ligação ao servidor. */
     printf("here");
@@ -81,25 +81,75 @@ void send_message(char buffer[]){
 
 void udp_action(char buffer[]) {
 
+    char command[20];  // Tamanho suficiente para armazenar a palavra
+    sscanf(buffer, "%s", command);
+        
+    if(strcmp(command, "login") == 0){ 
+        strcpy(buffer, "LIN");
+        strcat(buffer, buffer + strlen(command)); //modificar login para LIN e adicionar ao resto do conteudo 
+        loginUser(buffer);
+        send_message(buffer);
+    }
+    else if(strcmp(command, "logout") == 0){ 
+        strcpy(buffer, "LOU");
+        strcat(buffer, buffer + strlen(command));
+        function(buffer);
+        send_message(buffer);
+    }
+    else if(strcmp(command, "unregister") == 0){ 
+        strcpy(buffer, "UNR");
+        strcat(buffer, buffer + strlen(command));
+        function(buffer);
+        send_message(buffer);
+    }
+    else if(strcmp(command, "myauctions") == 0){ 
+        strcpy(buffer, "LMA");
+        strcat(buffer, buffer + strlen(command));
+        function(buffer);
+        send_message(buffer);
+    }
+    else if(strcmp(command, "mybids") == 0){ 
+        strcpy(buffer, "LMB");
+        strcat(buffer, buffer + strlen(command));
+        function(buffer);
+        send_message(buffer);
+    }
+    else if(strcmp(command, "list") == 0){ 
+        strcpy(buffer, "LST");
+        strcat(buffer, buffer + strlen(command));
+        function(buffer);
+        send_message(buffer);
+    }
+    else if(strcmp(command, "show_record") == 0){ 
+        strcpy(buffer, "SRC");
+        strcat(buffer, buffer + strlen(command));
+        function(buffer);
+        send_message(buffer);
+    }
+    else {
+        perror("invalid input");
+        exit(EXIT_FAILURE);
+    }
+    /*
     // Assume buffer contains some data
     if (strncmp(buffer, "L", 1) == 0) {
         // Determine the action based on the matched string
         for (int i = 0; i < sizeof(input_l) / sizeof(input_l[0]); i++) {
             switch (i) {
-                case 0: //LIN
+                case 0: //login/LIN
                     loginUser(buffer);
                     send_message(buffer);
                     break;
-                case 1: //LOU
+                case 1: //logout/LOU
                     logoutUser();
                     break;
-                case 2: //LMA
+                case 2: //myauctions/LMA
                     requestMyAuctions();
                     break;
-                case 3: //LMB
+                case 3: //mybids/LMB
                     requestAuctionsBids();
                     break;  
-                case 4: //LST
+                case 4: //list/LST
                     requestAuctions();
                     break;  
                 
@@ -160,12 +210,12 @@ void udp_action(char buffer[]) {
     else{
         perror("invalid input");
         exit(EXIT_FAILURE);
-    }
+    } */
     
 }
 
 
-int check_tcp(char buffer[]) {
+/*int check_tcp(char buffer[]) {
 
     char dest[4];  
 
@@ -179,33 +229,52 @@ int check_tcp(char buffer[]) {
     }
 
     return 0; // No match found
+}*/ 
+//tive de fazer uma funçao nova porque os tcp_inputs já nao têm todos o mesmo tamanho, mas nao sei se a nova está certa
+
+int check_tcp(char buffer[]) {
+    size_t buffer_len = strlen(buffer);
+
+    for (size_t i = 0; i < sizeof(tcp_input) / sizeof(tcp_input[0]); ++i) {
+        size_t input_len = strlen(tcp_input[i]);
+
+        // Verifica se o tamanho da palavra no buffer é igual ao tamanho do input
+        if (buffer_len >= input_len && strncmp(buffer, tcp_input[i], input_len) == 0) {
+            return 1; // Correspondência encontrada
+        }
+    }
+
+    return 0; // Nenhuma correspondência encontrada
 }
 
 void tcp_action(char buffer[]) {
 
-    if(strncmp(buffer, "ROA", 3) == 0){ 
-        function();
+    char command[20];  // Tamanho suficiente para armazenar a palavra
+    sscanf(buffer, "%s", command);
+
+    if(strcmp(command, "open") == 0){ 
+        strcpy(buffer, "OPA");
+        strcat(buffer, buffer + strlen(command)); 
+        loginUser(buffer);
+        send_message(buffer);
     }
-    else if(strncmp(buffer, "RCL", 3) == 0){ 
-        function();
+    else if(strcmp(command, "close") == 0){ 
+        strcpy(buffer, "CLS");
+        strcat(buffer, buffer + strlen(command)); 
+        loginUser(buffer);
+        send_message(buffer);
     }
-    else if(strncmp(buffer, "RSA", 3) == 0){ 
-        function();
+    else if(strcmp(command, "show_asset") == 0){ 
+        strcpy(buffer, "SAS");
+        strcat(buffer, buffer + strlen(command)); 
+        loginUser(buffer);
+        send_message(buffer);
     }
-    else if(strncmp(buffer, "RBD", 3) == 0){ 
-        function();
-    }
-    else if(strncmp(buffer, "OPA", 3) == 0){ 
-        function();
-    }
-    else if(strncmp(buffer, "CLS", 3) == 0){ 
-        function(); 
-    }
-    else if(strncmp(buffer, "SAS", 3) == 0){ 
-        function();
-    }
-    else if(strncmp(buffer, "BID", 3) == 0){ 
-        function(); 
+    else if(strcmp(command, "bid") == 0){ 
+        strcpy(buffer, "BID");
+        strcat(buffer, buffer + strlen(command)); 
+        loginUser(buffer);
+        send_message(buffer);
     }
     else {
         perror("invalid input");
@@ -253,15 +322,8 @@ int main() {
                 udp_action(buffer);
             }
             
-
         }
-            
-
+        
     }
-
-
-
-
-
 
 }
