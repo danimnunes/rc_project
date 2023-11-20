@@ -47,7 +47,7 @@ void send_message(char buffer[]){
     /* Busca informação do host "localhost", na porta especificada,
     guardando a informação nas `hints` e na `res`. Caso o host seja um nome
     e não um endereço IP (como é o caso), efetua um DNS Lookup. */
-    errcode = getaddrinfo(IP, PORT, &hints, &res);
+    errcode = getaddrinfo("tejo.tecnico.ulisboa.pt", PORT, &hints, &res);
     if (errcode != 0) {
         exit(1);
     }
@@ -56,7 +56,7 @@ void send_message(char buffer[]){
        Não são passadas flags (0), e é passado o endereço de destino.
        É apenas aqui criada a ligação ao servidor. */
     printf("here");
-    n = sendto(fd, buffer, 7, 0, res->ai_addr, res->ai_addrlen);
+    n = sendto(fd, buffer, 20, 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
         exit(1);
     }
@@ -245,6 +245,7 @@ int main() {
                 perror("fgets");
                 exit(EXIT_FAILURE);
             }
+            //strcat (buffer, "\n");
             if (check_tcp(buffer)) {
                 tcp_action(buffer);
             }
