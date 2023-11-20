@@ -26,9 +26,9 @@ struct addrinfo hints, *res;
 struct sockaddr_in addr;
 char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
 
-char possible_inputs[][4] = {"LIN", "RLI", "LOU", "RLO", "UNR", "RUR", "LMA", "RMA", "LMB", "RMB", "LST", "RLS", "SRC", "RRC"};
+
 char input_l[][4] = {"LIN", "LOU", "LMA", "LMB", "LST"};
-char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC"};
+char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC", "ROA", "RCL", "RSA", "RBD"};
 
 void check_action(char buffer) {
 
@@ -37,6 +37,7 @@ void check_action(char buffer) {
         // Determine the action based on the matched string
         for (int i = 0; i < sizeof(input_l) / sizeof(input_l[0]); i++) {
             switch (i) {
+                // udp cases /////////////////////////////
                 case 0: //LIN
                     loginUser();
                     break;
@@ -52,7 +53,7 @@ void check_action(char buffer) {
                 case 4: //LST
                     requestAuctions();
                     break;  
-                // Add more cases for other matches
+                
 
                 default:
                     perror("invalid input");
@@ -67,6 +68,7 @@ void check_action(char buffer) {
         // Determine the action based on the matched string
         for (int i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
             switch (i) {
+                // udp cases /////////////////////////////
                 case 0: //RLI
                     checkUserExists();
                     break;
@@ -88,7 +90,20 @@ void check_action(char buffer) {
                 case 6: //RRC
                     detailedAuction();
                     break;
-                // Add more cases for other matches
+                
+                // tcp cases ///////////////////////////////////////
+                case 7: //ROA
+                    check();
+                    break;
+                case 8: //RCL
+                    check();
+                    break;
+                case 9: //RSA
+                    detailed();
+                    break;
+                case 10: //RBD
+                    detailed();
+                    break;
 
                 default:
                     perror("invalid input");
@@ -100,13 +115,30 @@ void check_action(char buffer) {
     }
     
     //starts with other character than L or R
+    //udp cases/////////////////////////////////////
     else if(strncmp(buffer, "SRC", 3) == 0){ 
         requestRecord();
     }
     else if(strncmp(buffer, "UNR", 3) == 0){ 
         unregisterUsed();
         
-    }else{
+    }
+    
+    //tcp cases//////////////////////////////////
+    else if(strncmp(buffer, "OPA", 3) == 0){ 
+        request();
+    }
+    else if(strncmp(buffer, "CLS", 3) == 0){ 
+        unregist(); 
+    }
+    else if(strncmp(buffer, "SAS", 3) == 0){ 
+        request();
+    }
+    else if(strncmp(buffer, "BID", 3) == 0){ 
+        unregist(); 
+    }
+    
+    else{
         perror("invalid input");
         exit(EXIT_FAILURE);
     }
