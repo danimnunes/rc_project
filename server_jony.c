@@ -12,7 +12,6 @@
 #define PORT "58011"
 
 int udp_fd;
-int novoooooo;
 int tcp_fd;
 ssize_t n;
 socklen_t udp_addrlen;
@@ -72,17 +71,16 @@ void server() {
 
     while (1) {
         FD_ZERO(&all_fds_read);
-        FD_SET(STDIN_FILENO, &all_fds_read); 
         FD_SET(udp_fd, &all_fds_read);
         FD_SET(tcp_fd, &all_fds_read);
-        max_fd = udp_fd + tcp_fd
+        max_fd = udp_fd + tcp_fd;
 
         if (select(max_fd + 1, &all_fds_read, NULL, NULL, NULL) < 0) {
             perror("select");
             exit(1);
         }
 
-        if (FD_ISSET(udp_fd, &all_fds_read)) { // UDP messages
+        if (FD_ISSET(udp_fd, &all_fds_read)) {
             udp_addrlen = sizeof(udp_addr);
 
             if ((n = recvfrom(udp_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&udp_addr, &udp_addrlen)) == -1) {
@@ -98,16 +96,18 @@ void server() {
             }
         }
 
-        // Handling TCP connections
-        if (FD_ISSET(tcp_fd, &all_fds_read)) { // TCP connection requests
+        if (FD_ISSET(tcp_fd, &all_fds_read)) {
             struct sockaddr_in client_addr;
             socklen_t client_addrlen = sizeof(client_addr);
-            int client_socket = accept(tcp_fd, (struct sockaddr*)&client_addr, &client_addrlen);
+            int tcp_socket = accept(tcp_fd, (struct sockaddr*)&client_addr, &client_addrlen);
             
-            if (client_socket == -1) {
+            if (tcp_socket == -1) {
                 perror("accept");
                 exit(1);
             }
+
+            n = read(tcp_socket,buffer, 128);
+            if(n==-1)exit(1);
 
             // Handle the new TCP connection in the client_socket
             // You might want to add client_socket to your set of file descriptors
@@ -118,10 +118,6 @@ void server() {
         // You need to implement the code for handling data from connected TCP sockets
         // Loop through your list of connected TCP sockets and check FD_ISSET for each
 
-        // Placeholder for handling stdin
-        if (FD_ISSET(STDIN_FILENO, &all_fds_read)) {
-            // Handle stdin input here
-        }
     }
 
     // Close the UDP socket
