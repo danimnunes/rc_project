@@ -70,6 +70,7 @@ void server() {
     }
 
     while (1) {
+        printf("ollá");
         FD_ZERO(&all_fds_read);
         FD_SET(udp_fd, &all_fds_read);
         FD_SET(tcp_fd, &all_fds_read);
