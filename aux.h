@@ -1,7 +1,7 @@
 #ifndef AUX_H
 #define AUX_H
 
-int loginUser();
+int loginUser(char buffer);
 int logoutUser();
 int requestMyAuctions();
 int requestAuctionsBids();

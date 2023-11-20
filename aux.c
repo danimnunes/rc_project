@@ -1,6 +1,9 @@
 #include "aux.h"
 
-int loginUser(){
+
+
+int loginUser(char buffer){
+
     return 0;
 }
 int logoutUser(){
@@ -16,6 +19,7 @@ int requestAuctions(){
     return 0;
 }
 int checkUserExists(){
+
     return 0;
 }
 int checkUserLogged(){
