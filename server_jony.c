@@ -53,7 +53,7 @@ void udp_server() {
             exit(1);
         }
 
-        if (FD_ISSET(udp_fd, &all_fds_read)) {
+        if (FD_ISSET(udp_fd, &all_fds_read)) { //mensagens
             udp_addrlen = sizeof(udp_addr);
 
             if (recvfrom(udp_fd, buffer, sizeof(buffer), 0, (struct sockaddr *)&udp_addr, &udp_addrlen) == -1) {
@@ -66,12 +66,16 @@ void udp_server() {
                 exit(1);
             }
         }
-
+    
         // Placeholder for handling TCP connections
-        if (FD_ISSET(tcp_fd, &all_fds_read)) {
+        if (FD_ISSET(tcp_fd, &all_fds_read)) { //pedidos de ligaçao
             // Handle TCP input here
             // You will need to implement TCP connection handling
         }
+
+        // tcp para os q nao sao pedidos de ligaçao e sao mensagens
+
+        
 
         // Placeholder for handling stdin
         if (FD_ISSET(STDIN_FILENO, &all_fds_read)) {
