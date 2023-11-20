@@ -30,8 +30,8 @@ char tcp_input[][4] = {"ROA", "RCL", "RSA", "RBD", "OPA", "CLS", "SAS", "BID"};
 char input_l[][4] = {"LIN", "LOU", "LMA", "LMB", "LST"};
 char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC", "ROA", "RCL", "RSA", "RBD"};
 
-void send_message(){
-    
+void send_message(char buffer[]){
+    printf("%s", buffer);
     /* Cria um socket UDP (SOCK_DGRAM) para IPv4 (AF_INET).
     É devolvido um descritor de ficheiro (fd) para onde se deve comunicar. */
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -55,7 +55,8 @@ void send_message(){
     /* Envia para o `fd` (socket) a mensagem "Hello!\n" com o tamanho 7.
        Não são passadas flags (0), e é passado o endereço de destino.
        É apenas aqui criada a ligação ao servidor. */
-    n = sendto(fd, "Hello!\n", 7, 0, res->ai_addr, res->ai_addrlen);
+    printf("here");
+    n = sendto(fd, buffer, 7, 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
         exit(1);
     }
@@ -78,7 +79,7 @@ void send_message(){
     close(fd);
 }
 
-void udp_action(char buffer) {
+void udp_action(char buffer[]) {
 
     // Assume buffer contains some data
     if (strncmp(buffer, "L", 1) == 0) {
@@ -86,7 +87,8 @@ void udp_action(char buffer) {
         for (int i = 0; i < sizeof(input_l) / sizeof(input_l[0]); i++) {
             switch (i) {
                 case 0: //LIN
-                    loginUser();
+                    loginUser(buffer);
+                    send_message(buffer);
                     break;
                 case 1: //LOU
                     logoutUser();
@@ -163,7 +165,7 @@ void udp_action(char buffer) {
 }
 
 
-int check_tcp(char buffer) {
+int check_tcp(char buffer[]) {
 
     char dest[4];  
 
@@ -179,7 +181,7 @@ int check_tcp(char buffer) {
     return 0; // No match found
 }
 
-void tcp_action(char buffer) {
+void tcp_action(char buffer[]) {
 
     if(strncmp(buffer, "ROA", 3) == 0){ 
         function();

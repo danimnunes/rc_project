@@ -2,7 +2,7 @@
 
 
 
-int loginUser(char buffer){
+int loginUser(char buffer[]){
 
     return 0;
 }
@@ -46,3 +46,4 @@ int requestRecord(){
 int unregisterUsed(){
     return 0;
 }
+int function(){return 0;}
