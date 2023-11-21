@@ -73,7 +73,7 @@ void server() {
         FD_ZERO(&all_fds_read);
         FD_SET(udp_fd, &all_fds_read);
         FD_SET(tcp_fd, &all_fds_read);
-        max_fd = udp_fd + tcp_fd;
+        max_fd = (udp_fd > tcp_fd) ? udp_fd : tcp_fd; // o chat diz pra fazer como está, mas antes tinhamos : udp_fd + tcp_fd;
 
         if (select(max_fd + 1, &all_fds_read, NULL, NULL, NULL) < 0) {
             perror("select");
@@ -109,9 +109,11 @@ void server() {
             n = read(tcp_socket,buffer, 128);
             if(n==-1)exit(1);
 
-            // Handle the new TCP connection in the client_socket
-            // You might want to add client_socket to your set of file descriptors
-            // and manage it accordingly in your main loop.
+            // Aqui você pode adicionar código para processar as mensagens recebidas do cliente TCP
+            // Provavelmente, você quer criar uma função ou chamada específica para lidar com as operações de login, logout, etc.
+            // Certifique-se de adicionar o novo socket à sua lista de sockets TCP, se necessário.
+
+            close(tcp_socket); // Certifique-se de fechar o socket após o processamento.
         }
 
         // Placeholder for handling TCP messages
