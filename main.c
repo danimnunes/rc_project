@@ -31,7 +31,7 @@ char tcp_input[][11] = {"open", "close", "show_asset", "bid"};
 char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC", "ROA", "RCL", "RSA", "RBD"};*/
 
 void send_message(char buffer[]){
-    printf("%s", buffer);
+    printf("message to send->%s", buffer);
     /* Cria um socket UDP (SOCK_DGRAM) para IPv4 (AF_INET).
     É devolvido um descritor de ficheiro (fd) para onde se deve comunicar. */
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -49,13 +49,13 @@ void send_message(char buffer[]){
     e não um endereço IP (como é o caso), efetua um DNS Lookup. */
     errcode = getaddrinfo("tejo.tecnico.ulisboa.pt", PORT, &hints, &res);
     if (errcode != 0) {
+        printf("error in getaddrinfo");
         exit(1);
     }
 
     /* Envia para o `fd` (socket) a mensagem "Hello!\n" com o tamanho 20.
        Não são passadas flags (0), e é passado o endereço de destino.
        É apenas aqui criada a ligação ao servidor. */
-    printf("here");
     n = sendto(fd, buffer, 20, 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
         exit(1);
@@ -87,8 +87,9 @@ void udp_action(char buffer[]) {
     if(strcmp(command, "login") == 0){ 
         strcpy(buffer, "LIN");
         strcat(buffer, buffer + strlen(command)); //modificar login para LIN e adicionar ao resto do conteudo 
-        loginUser(buffer);
-        send_message(buffer);
+        if(loginUser(buffer)){
+            send_message(buffer);
+        }
     }
     else if(strcmp(command, "logout") == 0){ 
         strcpy(buffer, "LOU");
