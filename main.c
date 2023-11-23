@@ -52,6 +52,7 @@ void translate_answer(char buffer[]){
     for (int i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
         if(strncmp(input_r[i], command, 3)==0){
             switch (i) {
+                // UDP .............................
                 case 0: //login/RLI
                     if(analyse_answer("NOK",buffer)){
                         write_answer(" incorrect login attempt\n");
@@ -111,6 +112,51 @@ void translate_answer(char buffer[]){
                         write_answer("mostrar cenas\n"); //TO DO
                     }
                     break;
+
+                // TCP ....................................
+                case 7: //open/OPA
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("auction could not be started\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("mostrar AID\n"); //TO DO
+                    }else if(analyse_answer("NLG", buffer)){
+                        write_answer("user not logged in\n");
+                    }
+                    break;
+                case 8: //close/CLS
+                    if(analyse_answer("EAU",buffer)){
+                        write_answer("that auction does not exist\n");
+                    }else if(analyse_answer("EOW", buffer)){
+                        write_answer("auction is not owned by user\n");
+                    }else if(analyse_answer("END", buffer)){
+                        write_answer("auction has already finished.\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("fechar\n"); //TO DO
+                    }else if(analyse_answer("NLG", buffer)){
+                        write_answer("user not logged in\n");
+                    }
+                    break;
+                case 9: //show_asset/SAS
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("no file to be sent, or some other problem\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("mostrar ficheiro\n"); //TO DO
+                    }
+                    break;
+                case 10: //bid/BID
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("auction is not active\n");
+                    }else if(analyse_answer("ACC", buffer)){
+                        write_answer("bid was accepted\n"); //TO DO
+                    }else if(analyse_answer("REF", buffer)){
+                        write_answer("bid was refused because a larger bid has already been placed previously\n"); //TO DO
+                    }else if(analyse_answer("ILG", buffer)){
+                        write_answer("user tried to make a bid in an auction hosted by himself\n"); //TO DO
+                    }else if(analyse_answer("NLG", buffer)){
+                        write_answer("user not logged in\n");
+                    }
+                    break;
+
 
                 default:
                     write_answer(buffer);
