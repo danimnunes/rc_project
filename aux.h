@@ -1,8 +1,8 @@
 #ifndef AUX_H
 #define AUX_H
 
-int loginUser(char buffer[]);
-int logoutUser();
+int verify_input(char buffer[]);
+int verify_uid(char uid[]);
 int requestMyAuctions();
 int requestAuctionsBids();
 int requestAuctions();

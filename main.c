@@ -27,11 +27,102 @@ struct sockaddr_in addr;
 char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
 
 char tcp_input[][11] = {"open", "close", "show_asset", "bid"};
-/*char input_l[][4] = {"login", "logout", "myauctions", "mybids", "list"};
-char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC", "ROA", "RCL", "RSA", "RBD"};*/
+/*char input_l[][4] = {"login", "logout", "myauctions", "mybids", "list"};*/
+char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC"};
+
+void write_answer(char buffer[]){
+    write(1, "echo: ", 6);
+    write(1, buffer, strlen(buffer));
+}
+
+int analyse_answer(char status[], char buffer[]){
+    char command[4], answer[4];
+    sscanf(buffer, "%s %s", command, answer);
+    return !(strcmp(answer, status));
+}
+
+void translate_answer(char buffer[]){
+    char command[4];
+    sscanf(buffer,"%s",command);
+    // Determine the action based on the matched string
+    if(strcmp(command, "ERR")==0){
+        write_answer(buffer);
+        return;
+    }
+    for (int i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
+        if(strncmp(input_r[i], command, 3)==0){
+            switch (i) {
+                case 0: //login/RLI
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer(" incorrect login attempt\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("successful login\n");
+                    }else if(analyse_answer("REG", buffer)){
+                        write_answer("new user registered\n");
+                    }
+                    break;
+                case 1: //logout/RLO
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("user not logged in\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("successful logout\n");
+                    }else if(analyse_answer("UNR", buffer)){
+                        write_answer("unknown user\n");
+                    }
+                    break;
+                case 2: //unregister/RUR
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("incorrect unregister attempt\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("successful unregister\n");
+                    }else if(analyse_answer("UNR", buffer)){
+                        write_answer("unknown user\n");
+                    }
+                    break;
+                case 3: //myauctions/RMA
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("user is not involved in any of the currently active auctions\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("supostamente agr listo as auctions\n"); //TO DO
+                    }else if(analyse_answer("NLG", buffer)){
+                        write_answer("user not logged in\n");
+                    }
+                    break;  
+                case 4: //myauctionsbid/RMB
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("user has no active auction bids\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("agr listamos as bids supostamente\n"); //TO DO
+                    }else if(analyse_answer("NLG", buffer)){
+                        write_answer("user not logged in\n");
+                    }
+                    break;  
+                case 5: //list/RLS
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer(" no auctions are currently active\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("listar as auctions\n"); //TO DO
+                    }
+                    break;
+                case 6: //show_record/RRC
+                    if(analyse_answer("NOK",buffer)){
+                        write_answer("that auction does not exist\n");
+                    }else if(analyse_answer("OK", buffer)){
+                        write_answer("mostrar cenas\n"); //TO DO
+                    }
+                    break;
+
+                default:
+                    write_answer(buffer);
+                    // Handle default case if needed
+                    break;
+            }
+        }
+    }
+
+}
 
 void send_message(char buffer[]){
-    printf("message to send->%s", buffer);
     /* Cria um socket UDP (SOCK_DGRAM) para IPv4 (AF_INET).
     É devolvido um descritor de ficheiro (fd) para onde se deve comunicar. */
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -68,11 +159,11 @@ void send_message(char buffer[]){
     if (n == -1) {
         exit(1);
     }
-
+    translate_answer(buffer);
     /* Imprime a mensagem "echo" e o conteúdo do buffer (ou seja, o que foi recebido
     do servidor) para o STDOUT (fd = 1) */
-    write(1, "echo: ", 6);
-    write(1, buffer, n);
+    //write(1, "echo: ", 6);
+    //write(1, buffer, n);
 
     /* Desaloca a memória da estrutura `res` e fecha o socket */
     freeaddrinfo(res);
@@ -80,138 +171,66 @@ void send_message(char buffer[]){
 }
 
 void udp_action(char buffer[]) {
-
+    char message[20];
     char command[20];  // Tamanho suficiente para armazenar a palavra
     sscanf(buffer, "%s", command);
         
     if(strcmp(command, "login") == 0){ 
-        strcpy(buffer, "LIN");
-        strcat(buffer, buffer + strlen(command)); //modificar login para LIN e adicionar ao resto do conteudo 
-        if(loginUser(buffer)){
-            send_message(buffer);
+        strcpy(message, "LIN");
+        strcat(message, buffer + strlen(command)); //modificar login para LIN e adicionar ao resto do conteudo 
+        if(verify_input(buffer)){
+            send_message(message);
         }
     }
     else if(strcmp(command, "logout") == 0){ 
-        strcpy(buffer, "LOU");
-        strcat(buffer, buffer + strlen(command));
-        function(buffer);
-        send_message(buffer);
+        strcpy(message, "LOU");
+        strcat(message, buffer + strlen(command));
+        if(verify_input(buffer)){
+            send_message(message);
+        }
     }
     else if(strcmp(command, "unregister") == 0){ 
-        strcpy(buffer, "UNR");
-        strcat(buffer, buffer + strlen(command));
-        function(buffer);
-        send_message(buffer);
+        strcpy(message, "UNR");
+        strcat(message, buffer + strlen(command));
+        if(verify_input(buffer)){
+            send_message(message);
+        }
     }
-    else if(strcmp(command, "myauctions") == 0){ 
-        strcpy(buffer, "LMA");
-        strcat(buffer, buffer + strlen(command));
-        function(buffer);
-        send_message(buffer);
+    else if(strcmp(command, "myauctions") == 0 || strcmp(command, "ma") == 0 ){ 
+        char uid[8];
+        strcpy(message, "LMA");
+        strcat(message, buffer + strlen(command));
+        sscanf(buffer, "%s\t%s", command, uid);
+        if(verify_uid(uid)){
+            send_message(message);
+        }
     }
-    else if(strcmp(command, "mybids") == 0){ 
-        strcpy(buffer, "LMB");
-        strcat(buffer, buffer + strlen(command));
-        function(buffer);
-        send_message(buffer);
+    else if(strcmp(command, "mybids") == 0 || strcmp(command, "mb") == 0 ){ 
+        char uid[8];
+        strcpy(message, "LMB");
+        strcat(message, buffer + strlen(command));
+        sscanf(buffer, "%s\t%s", command, uid);
+        if(verify_uid(uid)){
+            send_message(message);
+        }
     }
-    else if(strcmp(command, "list") == 0){ 
-        strcpy(buffer, "LST");
-        strcat(buffer, buffer + strlen(command));
+    else if(strcmp(command, "list") == 0 || strcmp(command, "l") == 0 ){ 
+        strcpy(message, "LST");
+        strcat(message, buffer + strlen(command));
         function(buffer);
-        send_message(buffer);
+        send_message(message);
     }
-    else if(strcmp(command, "show_record") == 0){ 
-        strcpy(buffer, "SRC");
-        strcat(buffer, buffer + strlen(command));
+    else if(strcmp(command, "show_record") == 0 || strcmp(command, "sr") == 0 ){ 
+        strcpy(message, "SRC");
+        strcat(message, buffer + strlen(command));
         function(buffer);
-        send_message(buffer);
+        send_message(message);
     }
     else {
         perror("invalid input");
         exit(EXIT_FAILURE);
     }
-    /*
-    // Assume buffer contains some data
-    if (strncmp(buffer, "L", 1) == 0) {
-        // Determine the action based on the matched string
-        for (int i = 0; i < sizeof(input_l) / sizeof(input_l[0]); i++) {
-            switch (i) {
-                case 0: //login/LIN
-                    loginUser(buffer);
-                    send_message(buffer);
-                    break;
-                case 1: //logout/LOU
-                    logoutUser();
-                    break;
-                case 2: //myauctions/LMA
-                    requestMyAuctions();
-                    break;
-                case 3: //mybids/LMB
-                    requestAuctionsBids();
-                    break;  
-                case 4: //list/LST
-                    requestAuctions();
-                    break;  
-                
-
-                default:
-                    perror("invalid input");
-                    exit(EXIT_FAILURE);
-                    // Handle default case if needed
-                    break;
-            }
-        }
-    }
-
-    else if (strncmp(buffer, "R", 1) == 0) {
-        // Determine the action based on the matched string
-        for (int i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
-            switch (i) {
-                case 0: //RLI
-                    checkUserExists();
-                    break;
-                case 1: //RLO
-                    checkUserLogged();
-                    break;
-                case 2: //RUR
-                    checkUserExistsLogged();
-                    break;
-                case 3: //RMA
-                    checkMyAuctions();
-                    break;
-                case 4: //RMB
-                    checkAuctionsBids();
-                    break;
-                case 5: //RLS
-                    checkAuctions();
-                    break;
-                case 6: //RRC
-                    detailedAuction();
-                    break;
-
-                default:
-                    perror("invalid input");
-                    exit(EXIT_FAILURE);
-                    // Handle default case if needed
-                    break;
-            }
-        }
-    }
     
-    //starts with other character than L or R
-    else if(strncmp(buffer, "SRC", 3) == 0){ 
-        requestRecord();
-    }
-    else if(strncmp(buffer, "UNR", 3) == 0){ 
-        unregisterUsed();
-        
-    }
-    
-    else{
-        perror("invalid input");
-        exit(EXIT_FAILURE);
-    } */
     
 }
 
@@ -256,25 +275,25 @@ void tcp_action(char buffer[]) {
     if(strcmp(command, "open") == 0){ 
         strcpy(buffer, "OPA");
         strcat(buffer, buffer + strlen(command)); 
-        loginUser(buffer);
+        function(buffer);
         send_message(buffer);
     }
     else if(strcmp(command, "close") == 0){ 
         strcpy(buffer, "CLS");
         strcat(buffer, buffer + strlen(command)); 
-        loginUser(buffer);
+        function(buffer);
         send_message(buffer);
     }
-    else if(strcmp(command, "show_asset") == 0){ 
+    else if(strcmp(command, "show_asset") == 0 || strcmp(command, "sa") == 0 ){ 
         strcpy(buffer, "SAS");
         strcat(buffer, buffer + strlen(command)); 
-        loginUser(buffer);
+        function(buffer);
         send_message(buffer);
     }
-    else if(strcmp(command, "bid") == 0){ 
+    else if(strcmp(command, "bid") == 0 || strcmp(command, "b") == 0 ){ 
         strcpy(buffer, "BID");
         strcat(buffer, buffer + strlen(command)); 
-        loginUser(buffer);
+        function(buffer);
         send_message(buffer);
     }
     else {
