@@ -122,7 +122,7 @@ void translate_answer(char buffer[]){
 
 }
 
-void send_message(char buffer[]){
+void send_message(char buffer[], size_t bytes){
     /* Cria um socket UDP (SOCK_DGRAM) para IPv4 (AF_INET).
     É devolvido um descritor de ficheiro (fd) para onde se deve comunicar. */
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -147,7 +147,7 @@ void send_message(char buffer[]){
     /* Envia para o `fd` (socket) a mensagem "Hello!\n" com o tamanho 20.
        Não são passadas flags (0), e é passado o endereço de destino.
        É apenas aqui criada a ligação ao servidor. */
-    n = sendto(fd, buffer, 20, 0, res->ai_addr, res->ai_addrlen);
+    n = sendto(fd, buffer, bytes, 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
         exit(1);
     }
@@ -179,21 +179,21 @@ void udp_action(char buffer[]) {
         strcpy(message, "LIN");
         strcat(message, buffer + strlen(command)); //modificar login para LIN e adicionar ao resto do conteudo 
         if(verify_input(buffer)){
-            send_message(message);
+            send_message(message, 20);
         }
     }
     else if(strcmp(command, "logout") == 0){ 
         strcpy(message, "LOU");
         strcat(message, buffer + strlen(command));
         if(verify_input(buffer)){
-            send_message(message);
+            send_message(message, 20);
         }
     }
     else if(strcmp(command, "unregister") == 0){ 
         strcpy(message, "UNR");
         strcat(message, buffer + strlen(command));
         if(verify_input(buffer)){
-            send_message(message);
+            send_message(message, 20);
         }
     }
     else if(strcmp(command, "myauctions") == 0 || strcmp(command, "ma") == 0 ){ 
@@ -202,7 +202,7 @@ void udp_action(char buffer[]) {
         strcat(message, buffer + strlen(command));
         sscanf(buffer, "%s\t%s", command, uid);
         if(verify_uid(uid)){
-            send_message(message);
+            send_message(message, 11);
         }
     }
     else if(strcmp(command, "mybids") == 0 || strcmp(command, "mb") == 0 ){ 
@@ -211,20 +211,20 @@ void udp_action(char buffer[]) {
         strcat(message, buffer + strlen(command));
         sscanf(buffer, "%s\t%s", command, uid);
         if(verify_uid(uid)){
-            send_message(message);
+            send_message(message, 11);
         }
     }
     else if(strcmp(command, "list") == 0 || strcmp(command, "l") == 0 ){ 
         strcpy(message, "LST");
         strcat(message, buffer + strlen(command));
         function(buffer);
-        send_message(message);
+        send_message(message, 4);
     }
     else if(strcmp(command, "show_record") == 0 || strcmp(command, "sr") == 0 ){ 
         strcpy(message, "SRC");
         strcat(message, buffer + strlen(command));
         function(buffer);
-        send_message(message);
+        send_message(message, 8);
     }
     else {
         perror("invalid input");
@@ -276,25 +276,25 @@ void tcp_action(char buffer[]) {
         strcpy(buffer, "OPA");
         strcat(buffer, buffer + strlen(command)); 
         function(buffer);
-        send_message(buffer);
+        send_message(buffer, 20);
     }
     else if(strcmp(command, "close") == 0){ 
         strcpy(buffer, "CLS");
         strcat(buffer, buffer + strlen(command)); 
         function(buffer);
-        send_message(buffer);
+        send_message(buffer, 20);
     }
     else if(strcmp(command, "show_asset") == 0 || strcmp(command, "sa") == 0 ){ 
         strcpy(buffer, "SAS");
         strcat(buffer, buffer + strlen(command)); 
         function(buffer);
-        send_message(buffer);
+        send_message(buffer, 20);
     }
     else if(strcmp(command, "bid") == 0 || strcmp(command, "b") == 0 ){ 
         strcpy(buffer, "BID");
         strcat(buffer, buffer + strlen(command)); 
         function(buffer);
-        send_message(buffer);
+        send_message(buffer, 20);
     }
     else {
         perror("invalid input");
