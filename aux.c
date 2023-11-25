@@ -8,7 +8,7 @@ int verify_uid(char uid[]){
         printf("Invalid input: uid size wrong\n");
         return 0;
     }
-    for (int i=0; i<strlen(uid);i++){
+    for (size_t i=0; i<strlen(uid);i++){
         if(!isdigit(uid[i])){
             printf("Invalid input: uid has 6 digits\n");
             return 0;
@@ -17,7 +17,7 @@ int verify_uid(char uid[]){
     return 1;
 }
 
-int verify_input(char buffer[]){
+int verify_login_input(char buffer[]){
 
     char command[20], uid[8], password[10];
     sscanf(buffer, "%s\t%s\t%s", command, uid, password);
@@ -26,7 +26,7 @@ int verify_input(char buffer[]){
         printf("Invalid input: password has 8 digits or characters\n");
         return 0;
     }
-    for (int i=0; i<strlen(password);i++){
+    for (size_t i=0; i<strlen(password);i++){
         if(!isdigit(password[i]) && !isalpha(password[i])){
             printf("Invalid input: password\n");
             return 0;
@@ -36,6 +36,27 @@ int verify_input(char buffer[]){
 
     return verify_uid(uid);;
 }
+
+/*
+int verify_input(char buffer[]){
+
+    char command[20], uid[8], password[10];
+    sscanf(buffer, "%s\t%s\t%s", command, uid, password);
+    
+    if(strlen(password)!=8){
+        printf("Invalid input: password has 8 digits or characters\n");
+        return 0;
+    }
+    for (size_t i=0; i<strlen(password);i++){
+        if(!isdigit(password[i]) && !isalpha(password[i])){
+            printf("Invalid input: password\n");
+            return 0;
+        }
+    }
+
+
+    return verify_uid(uid);;
+}*/
 
 int requestMyAuctions(){
     return 0;

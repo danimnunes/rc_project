@@ -25,7 +25,8 @@ res - Localização onde a função getaddrinfo() armazenará informações sobr
 struct addrinfo hints, *res;
 struct sockaddr_in addr;
 char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
-
+char current_uid[7];
+char current_uid_ps[9];
 char tcp_input[][11] = {"open", "close", "show_asset", "bid"};
 /*char input_l[][4] = {"login", "logout", "myauctions", "mybids", "list"};*/
 char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC"};
@@ -49,7 +50,7 @@ void translate_answer(char buffer[]){
         write_answer(buffer);
         return;
     }
-    for (int i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
+    for (size_t i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
         if(strncmp(input_r[i], command, 3)==0){
             switch (i) {
                 // UDP .............................
@@ -89,7 +90,7 @@ void translate_answer(char buffer[]){
                         write_answer("user not logged in\n");
                     }
                     break;  
-                case 4: //myauctionsbid/RMB
+                case 4: //mybids/RMB
                     if(analyse_answer("NOK",buffer)){
                         write_answer("user has no active auction bids\n");
                     }else if(analyse_answer("OK", buffer)){
@@ -206,10 +207,6 @@ void send_message(char buffer[], size_t bytes){
         exit(1);
     }
     translate_answer(buffer);
-    /* Imprime a mensagem "echo" e o conteúdo do buffer (ou seja, o que foi recebido
-    do servidor) para o STDOUT (fd = 1) */
-    //write(1, "echo: ", 6);
-    //write(1, buffer, n);
 
     /* Desaloca a memória da estrutura `res` e fecha o socket */
     freeaddrinfo(res);
@@ -224,52 +221,51 @@ void udp_action(char buffer[]) {
     if(strcmp(command, "login") == 0){ 
         strcpy(message, "LIN");
         strcat(message, buffer + strlen(command)); //modificar login para LIN e adicionar ao resto do conteudo 
-        if(verify_input(buffer)){
+        if(verify_login_input(buffer)){
+            sscanf(buffer, "%s\t%s\t%s", command, current_uid, current_uid_ps);
             send_message(message, 20);
         }
     }
     else if(strcmp(command, "logout") == 0){ 
         strcpy(message, "LOU");
-        strcat(message, buffer + strlen(command));
-        if(verify_input(buffer)){
-            send_message(message, 20);
-        }
+        strcat(message, " ");
+        strcat(message, current_uid);
+        strcat(message, " ");
+        strcat(message, current_uid_ps);
+        strcat(message, "\n");
+        send_message(message, 20);
     }
     else if(strcmp(command, "unregister") == 0){ 
         strcpy(message, "UNR");
-        strcat(message, buffer + strlen(command));
-        if(verify_input(buffer)){
-            send_message(message, 20);
-        }
+        strcat(message, " ");
+        strcat(message, current_uid);
+        strcat(message, " ");
+        strcat(message, current_uid_ps);
+        strcat(message, "\n");
+        send_message(message, 20);
     }
     else if(strcmp(command, "myauctions") == 0 || strcmp(command, "ma") == 0 ){ 
-        char uid[8];
         strcpy(message, "LMA");
-        strcat(message, buffer + strlen(command));
-        sscanf(buffer, "%s\t%s", command, uid);
-        if(verify_uid(uid)){
-            send_message(message, 11);
-        }
+        strcat(message, " ");
+        strcat(message, current_uid);
+        strcat(message, "\n");
+        send_message(message, 11);
     }
     else if(strcmp(command, "mybids") == 0 || strcmp(command, "mb") == 0 ){ 
-        char uid[8];
         strcpy(message, "LMB");
-        strcat(message, buffer + strlen(command));
-        sscanf(buffer, "%s\t%s", command, uid);
-        if(verify_uid(uid)){
-            send_message(message, 11);
-        }
+        strcat(message, " ");
+        strcat(message, current_uid);
+        strcat(message, "\n");
+        send_message(message, 11);
+        
     }
     else if(strcmp(command, "list") == 0 || strcmp(command, "l") == 0 ){ 
         strcpy(message, "LST");
-        strcat(message, buffer + strlen(command));
-        function(buffer);
         send_message(message, 4);
     }
     else if(strcmp(command, "show_record") == 0 || strcmp(command, "sr") == 0 ){ 
         strcpy(message, "SRC");
-        strcat(message, buffer + strlen(command));
-        function(buffer);
+        //strcat(message, buffer + strlen(command));
         send_message(message, 8);
     }
     else {
