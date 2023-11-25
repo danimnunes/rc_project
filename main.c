@@ -261,6 +261,7 @@ void udp_action(char buffer[]) {
     }
     else if(strcmp(command, "list") == 0 || strcmp(command, "l") == 0 ){ 
         strcpy(message, "LST");
+        strcat(message, "\n");
         send_message(message, 4);
     }
     else if(strcmp(command, "show_record") == 0 || strcmp(command, "sr") == 0 ){ 
