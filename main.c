@@ -24,7 +24,8 @@ res - Localização onde a função getaddrinfo() armazenará informações sobr
 */
 struct addrinfo hints, *res;
 struct sockaddr_in addr;
-char buffer[6001]; // buffer para onde serão escritos os dados recebidos do servidor
+char buffer2[6001];
+char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
 char current_uid[7], aux_uid[7];
 char current_uid_ps[9], aux_uid_ps[9];
 char tcp_input[][11] = {"open", "close", "show_asset", "bid"};
@@ -226,20 +227,21 @@ void send_message(char buffer[], size_t bytes){
     /* Recebe 128 Bytes do servidor e guarda-os no buffer.
        As variáveis `addr` e `addrlen` não são usadas pois não foram inicializadas. */
     addrlen = sizeof(addr);
-    n = recvfrom(fd, buffer, 6001, 0, (struct sockaddr *)&addr, &addrlen);
+    
+    n = recvfrom(fd, buffer2, 6001, 0, (struct sockaddr *)&addr, &addrlen);
     if (n == -1) {
         puts("error in recvfrom");
         exit(1);
     }
 
-    printf("%s\n", buffer);
+    printf("%s\n", buffer2);
 
 
     for(int i=0; i<3; i++){
-        cmd_rcv[i]=buffer[i];
+        cmd_rcv[i]=buffer2[i];
     }
     if(reply_matches(cmd_sent, cmd_rcv)){
-        translate_answer(buffer);
+        translate_answer(buffer2);
     }else{
         puts("something went wrong communicating with server");
     }
