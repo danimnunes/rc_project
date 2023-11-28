@@ -25,11 +25,12 @@ res - Localização onde a função getaddrinfo() armazenará informações sobr
 struct addrinfo hints, *res;
 struct sockaddr_in addr;
 char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
-char current_uid[7];
-char current_uid_ps[9];
+char current_uid[7], aux_uid[7];
+char current_uid_ps[9], aux_uid_ps[9];
 char tcp_input[][11] = {"open", "close", "show_asset", "bid"};
 /*char input_l[][4] = {"login", "logout", "myauctions", "mybids", "list"};*/
 char input_r[][4] = {"RLI", "RLO", "RUR", "RMA", "RMB", "RLS", "RRC"};
+char cmd_sent[][4] = {"LIN", "LOU", "UNR", "LMA", "LMB", "LST", "SRC"};
 
 void write_answer(char buffer[]){
     write(1, "echo: ", 6);
@@ -40,6 +41,19 @@ int analyse_answer(char status[], char buffer[]){
     char command[4], answer[4];
     sscanf(buffer, "%s %s", command, answer);
     return !(strcmp(answer, status));
+}
+
+int reply_matches(char sent[], char rcv[]){
+    int matches=0;
+    for(size_t i=0; i<sizeof(cmd_sent);i++){
+        if(strcmp(sent, cmd_sent[i])){
+            if(strcmp(rcv, input_r[i])){
+                matches=1;
+                break;
+            }
+        }
+    }
+    return matches;
 }
 
 void translate_answer(char buffer[]){
@@ -59,6 +73,8 @@ void translate_answer(char buffer[]){
                         write_answer(" incorrect login attempt\n");
                     }else if(analyse_answer("OK", buffer)){
                         write_answer("successful login\n");
+                        strcpy(current_uid, aux_uid);
+                        strcpy(current_uid_ps, aux_uid_ps);
                     }else if(analyse_answer("REG", buffer)){
                         write_answer("new user registered\n");
                     }
@@ -68,6 +84,8 @@ void translate_answer(char buffer[]){
                         write_answer("user not logged in\n");
                     }else if(analyse_answer("OK", buffer)){
                         write_answer("successful logout\n");
+                        memset(current_uid, 0, sizeof(current_uid));
+                        memset(current_uid_ps, 0, sizeof(current_uid_ps));
                     }else if(analyse_answer("UNR", buffer)){
                         write_answer("unknown user\n");
                     }
@@ -77,6 +95,8 @@ void translate_answer(char buffer[]){
                         write_answer("incorrect unregister attempt\n");
                     }else if(analyse_answer("OK", buffer)){
                         write_answer("successful unregister\n");
+                        memset(current_uid, 0, sizeof(current_uid));
+                        memset(current_uid_ps, 0, sizeof(current_uid_ps));
                     }else if(analyse_answer("UNR", buffer)){
                         write_answer("unknown user\n");
                     }
@@ -170,6 +190,10 @@ void translate_answer(char buffer[]){
 }
 
 void send_message(char buffer[], size_t bytes){
+    char cmd_sent[4], cmd_rcv[4];
+    for(int i=0; i<3; i++){
+        cmd_sent[i]=buffer[i];
+    }
     /* Cria um socket UDP (SOCK_DGRAM) para IPv4 (AF_INET).
     É devolvido um descritor de ficheiro (fd) para onde se deve comunicar. */
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -204,9 +228,17 @@ void send_message(char buffer[], size_t bytes){
     addrlen = sizeof(addr);
     n = recvfrom(fd, buffer, 128, 0, (struct sockaddr *)&addr, &addrlen);
     if (n == -1) {
+        puts("error in recvfrom");
         exit(1);
     }
-    translate_answer(buffer);
+    for(int i=0; i<3; i++){
+        cmd_rcv[i]=buffer[i];
+    }
+    if(reply_matches(cmd_sent, cmd_rcv)){
+        translate_answer(buffer);
+    }else{
+        puts("something went wrong communicating with server");
+    }
 
     /* Desaloca a memória da estrutura `res` e fecha o socket */
     freeaddrinfo(res);
@@ -222,41 +254,50 @@ void udp_action(char buffer[]) {
         strcpy(message, "LIN");
         strcat(message, buffer + strlen(command)); //modificar login para LIN e adicionar ao resto do conteudo 
         if(verify_login_input(buffer)){
-            sscanf(buffer, "%s\t%s\t%s", command, current_uid, current_uid_ps);
+            sscanf(buffer, "%s\t%s\t%s", command, aux_uid, aux_uid_ps);
             send_message(message, 20);
         }
     }
     else if(strcmp(command, "logout") == 0){ 
-        strcpy(message, "LOU");
-        strcat(message, " ");
-        strcat(message, current_uid);
-        strcat(message, " ");
-        strcat(message, current_uid_ps);
-        strcat(message, "\n");
-        send_message(message, 20);
+        if(strlen(current_uid)==6){
+            strcpy(message, "LOU");
+            strcat(message, " ");
+            strcat(message, current_uid);
+            strcat(message, " ");
+            strcat(message, current_uid_ps);
+            strcat(message, "\n");
+            send_message(message, 20);
+        }else{puts("You must login first.");}
+
     }
     else if(strcmp(command, "unregister") == 0){ 
-        strcpy(message, "UNR");
-        strcat(message, " ");
-        strcat(message, current_uid);
-        strcat(message, " ");
-        strcat(message, current_uid_ps);
-        strcat(message, "\n");
-        send_message(message, 20);
-    }
+        if(strlen(current_uid)==6){
+            strcpy(message, "UNR");
+            strcat(message, " ");
+            strcat(message, current_uid);
+            strcat(message, " ");
+            strcat(message, current_uid_ps);
+            strcat(message, "\n");
+            send_message(message, 20);
+        }else{puts("You must login first.");}
+    }   
     else if(strcmp(command, "myauctions") == 0 || strcmp(command, "ma") == 0 ){ 
-        strcpy(message, "LMA");
-        strcat(message, " ");
-        strcat(message, current_uid);
-        strcat(message, "\n");
-        send_message(message, 11);
+        if(strlen(current_uid)==6){
+            strcpy(message, "LMA");
+            strcat(message, " ");
+            strcat(message, current_uid);
+            strcat(message, "\n");
+            send_message(message, 11);
+        }else{printf("You must login first.\n");}
     }
     else if(strcmp(command, "mybids") == 0 || strcmp(command, "mb") == 0 ){ 
-        strcpy(message, "LMB");
-        strcat(message, " ");
-        strcat(message, current_uid);
-        strcat(message, "\n");
-        send_message(message, 11);
+        if(strlen(current_uid)==6){
+            strcpy(message, "LMB");
+            strcat(message, " ");
+            strcat(message, current_uid);
+            strcat(message, "\n");
+            send_message(message, 11);
+        }else{printf("You must login first.\n");}
         
     }
     else if(strcmp(command, "list") == 0 || strcmp(command, "l") == 0 ){ 
@@ -271,7 +312,6 @@ void udp_action(char buffer[]) {
     }
     else {
         perror("invalid input");
-        exit(EXIT_FAILURE);
     }
     
     
@@ -341,7 +381,6 @@ void tcp_action(char buffer[]) {
     }
     else {
         perror("invalid input");
-        exit(EXIT_FAILURE);
     }
 }
 
