@@ -358,15 +358,39 @@ int check_tcp(char buffer[]) {
 }
 
 void tcp_action(char buffer[]) {
-
+    char message[20];
     char command[20];  // Tamanho suficiente para armazenar a palavra
     sscanf(buffer, "%s", command);
 
     if(strcmp(command, "open") == 0){ 
-        strcpy(buffer, "OPA");
-        strcat(buffer, buffer + strlen(command)); 
-        function(buffer);
-        send_message(buffer, 20);
+        char name[11], asset_name[20], start_value[7], time_active[6];
+
+        if(strlen(current_uid)==6){
+            sscanf(buffer, "%s %s %s %s %s", command, name, asset_name, start_value, time_active);
+            if(verify_open_input(name, start_value, time_active)){
+                strcpy(message, "OPA");
+                strcat(message, " ");
+                strcat(message, current_uid);
+                strcat(message, " ");
+                strcat(message, current_uid_ps);
+                strcat(message, " ");
+                strcat(message, name); 
+                strcat(message, " ");
+                strcat(message, start_value);
+                strcat(message, " ");
+                strcat(message, time_active);
+                strcat(message, " ");
+                strcat(message, asset_name);
+                strcat(message, " ");
+                strcpy(message, getSize(asset_name, message));
+                strcat(message, " ");
+                strcpy(message, getData(asset_name, message));
+                printf("%s", message);
+                send_message(message, 20);
+            }
+        } else {
+            puts("You most login first.");
+        }
     }
     else if(strcmp(command, "close") == 0){ 
         strcpy(buffer, "CLS");

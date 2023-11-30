@@ -4,6 +4,9 @@
 int verify_login_input(char buffer[]);
 int verify_uid(char uid[]);
 int verify_aid(char buffer[]);
+int verify_open_input(char name[], char start_value[], char time_active[]);
+char *getSize(char asset_name[], char buffer[]);
+char *getData(char asset_name[], char buffer[]);
 int requestMyAuctions();
 int requestAuctionsBids();
 int requestAuctions();
