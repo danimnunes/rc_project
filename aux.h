@@ -3,6 +3,7 @@
 
 int verify_login_input(char buffer[]);
 int verify_uid(char uid[]);
+int verify_aid(char buffer[]);
 int requestMyAuctions();
 int requestAuctionsBids();
 int requestAuctions();

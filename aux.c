@@ -37,6 +37,24 @@ int verify_login_input(char buffer[]){
     return verify_uid(uid);;
 }
 
+
+int verify_aid(char buffer[]){
+    char command[20], aid[4];
+    sscanf(buffer, "%s\t%s", command, aid);
+    
+    if(strlen(aid)!=3){
+        printf("Invalid input: aid size wrong\n");
+        return 0;
+    }
+    for (size_t i=0; i<strlen(aid);i++){
+        if(!isdigit(aid[i])){
+            printf("Invalid input: uid has 3 digits\n");
+            return 0;
+        }
+    } 
+    return 1;
+}
+
 /*
 int verify_input(char buffer[]){
 

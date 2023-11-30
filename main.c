@@ -106,7 +106,7 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("user is not involved in any of the currently active auctions\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("supostamente agr listo as auctions\n"); //TO DO
+                        write_answer("supostamente agr listo as auctions\n"); //TO DOOOOOOOOOOOOO
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
                     }
@@ -115,7 +115,7 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("user has no active auction bids\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("agr listamos as bids supostamente\n"); //TO DO
+                        write_answer("agr listamos as bids supostamente\n"); //TO DOOOOOOOOOOOO
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
                     }
@@ -124,14 +124,14 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer(" no auctions are currently active\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("listar as auctions\n"); //TO DO
+                        write_answer(buffer); 
                     }
                     break;
                 case 6: //show_record/RRC
                     if(analyse_answer("NOK",buffer)){
                         write_answer("that auction does not exist\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("mostrar cenas\n"); //TO DO
+                        write_answer(buffer); //TO DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
                     }
                     break;
 
@@ -234,7 +234,6 @@ void send_message(char buffer[], size_t bytes){
         exit(1);
     }
 
-    printf("%s\n", buffer2);
 
 
     for(int i=0; i<3; i++){
@@ -313,8 +312,10 @@ void udp_action(char buffer[]) {
     }
     else if(strcmp(command, "show_record") == 0 || strcmp(command, "sr") == 0 ){ 
         strcpy(message, "SRC");
-        //strcat(message, buffer + strlen(command));
-        send_message(message, 8);
+        strcat(message, buffer + strlen(command));
+        if(verify_aid(buffer)){
+            send_message(message, 8);
+        }
     }
     else {
         perror("invalid input");
