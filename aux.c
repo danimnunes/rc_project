@@ -118,7 +118,7 @@ char *getSize(char asset_name[], char buffer[])
 char *getData(char asset_name[], char buffer[]) 
 { 
     // Store the content of the file
-    char fdata[100];
+    char fdata[100];  //HERE aqui supostamnete a data pode ter ate 10 000 000 bytes, no entanto se puser esse valor da segmentation fault por isso esta 100 para já
     // opening the file in read mode 
     FILE* fp = fopen(asset_name, "r"); 
   
