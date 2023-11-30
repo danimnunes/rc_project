@@ -131,7 +131,7 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("that auction does not exist\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer(buffer); //TO DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                        write_answer(buffer); 
                     }
                     break;
 
