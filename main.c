@@ -146,9 +146,10 @@ void translate_answer(char buffer[]){
                         write_answer("auction could not be started\n");
                     }else if(analyse_answer("OK", buffer)){
                         char message[34];
+                        memset(message, 0, sizeof(message));
                         strcat(message, "Assigned auction identifier: ");
                         strcat(message, buffer + 7); //shit to afTer the command and the OK
-                        write_answer(message); //TO DO
+                        write_answer(message); 
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
                     }
@@ -161,7 +162,7 @@ void translate_answer(char buffer[]){
                     }else if(analyse_answer("END", buffer)){
                         write_answer("auction has already finished.\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("fechar\n"); //TO DO
+                        write_answer("fechar\n"); //TO DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
                     }
@@ -170,14 +171,25 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("no file to be sent, or some other problem\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("mostrar ficheiro\n"); //TO DO
+                        char command[4], answer[4], name[20], message[40];
+                        memset(name, 0, sizeof(name));
+                        memset(message, 0, sizeof(message));
+                        ssize_t size;
+                        sscanf(buffer, "%s %s %s %zd", command, answer, name, &size);
+                        char size_str[20]; 
+                        snprintf(size_str, sizeof(size_str), "%zd", size);
+                        strcat(message, name);
+                        strcat(message, " ");
+                        strcat(message, size_str);
+                        strcat(message, "\n");
+                        write_answer(message); //TO DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
                     }
                     break;
                 case 10: //bid/BID
                     if(analyse_answer("NOK",buffer)){
                         write_answer("auction is not active\n");
                     }else if(analyse_answer("ACC", buffer)){
-                        write_answer("bid was accepted\n"); //TO DO
+                        write_answer("bid was accepted\n"); //TO DOOOOOOOOOOOOOOOOOOOOOOOOo
                     }else if(analyse_answer("REF", buffer)){
                         write_answer("bid was refused because a larger bid has already been placed previously\n"); //TO DO
                     }else if(analyse_answer("ILG", buffer)){
@@ -462,10 +474,13 @@ void tcp_action(char buffer[]) {
         send_message_tcp(buffer);
     }
     else if(strcmp(command, "show_asset") == 0 || strcmp(command, "sa") == 0 ){ 
-        strcpy(buffer, "SAS");
-        strcat(buffer, buffer + strlen(command)); 
-        function(buffer);
-        send_message_tcp(buffer);
+        
+        if(verify_aid(buffer)) {
+            strcpy(buffer, "SAS");
+            strcat(buffer, buffer + strlen(command)); 
+            send_message_tcp(buffer);
+        }
+        
     }
     else if(strcmp(command, "bid") == 0 || strcmp(command, "b") == 0 ){ 
         strcpy(buffer, "BID");
