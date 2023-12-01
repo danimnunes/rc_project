@@ -105,8 +105,9 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("user is not involved in any of the currently active auctions\n");
                     }else if(analyse_answer("OK", buffer)){
-                        char message[6000];   // HERE nao sei bem qual o tamanho aqui, quantas auctions podemos listar?
-                        strcat(message, buffer + 7); //7 to remove command (3) and OK (2) plus the (2) spaces before the auctions
+                        char message[6001];   
+                        memset(message, 0, sizeof(message));
+                        strcat(message, buffer + 7); 
                         write_answer(message); 
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
@@ -114,7 +115,7 @@ void translate_answer(char buffer[]){
                     break;  
                 case 4: //mybids/RMB
                     if(analyse_answer("NOK",buffer)){
-                        write_answer("user has no active auction bids\n");
+                        write_answer("user has no ongoing bids\n");
                     }else if(analyse_answer("OK", buffer)){
                         write_answer("agr listamos as bids supostamente\n"); //TO DOOOOOOOOOOOO
                     }else if(analyse_answer("NLG", buffer)){
@@ -125,7 +126,10 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer(" no auctions are currently active\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer(buffer); 
+                        char message[6001];   
+                        memset(message, 0, sizeof(message));
+                        strcat(message, buffer + 7); 
+                        write_answer(message); 
                     }
                     break;
                 case 6: //show_record/RRC
@@ -195,7 +199,8 @@ void translate_answer(char buffer[]){
 }
 
 void send_message_tcp(char buffer[]){
-    char buffer2[100];
+    char buffer2[128];
+    memset(buffer2, 0, sizeof(buffer2));
     char cmd_sent[4], cmd_rcv[4];
     for(int i=0; i<3; i++){
         cmd_sent[i]=buffer[i];
@@ -250,6 +255,7 @@ void send_message_tcp(char buffer[]){
 
 void send_message_udp(char buffer[], size_t bytes){
     char buffer2[6001];
+    memset(buffer2, 0, sizeof(buffer2));
     char cmd_sent[4], cmd_rcv[4];
     for(int i=0; i<3; i++){
         cmd_sent[i]=buffer[i];
@@ -286,7 +292,6 @@ void send_message_udp(char buffer[], size_t bytes){
     /* Recebe 128 Bytes do servidor e guarda-os no buffer.
        As variáveis `addr` e `addrlen` não são usadas pois não foram inicializadas. */
     addrlen = sizeof(addr);
-    
     n = recvfrom(fd, buffer2, 6001, 0, (struct sockaddr *)&addr, &addrlen);
     if (n == -1) {
         puts("error in recvfrom");
