@@ -119,7 +119,10 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("user has no ongoing bids\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("agr listamos as bids supostamente\n"); //TO DOOOOOOOOOOOO
+                        char message[6001];   
+                        memset(message, 0, sizeof(message));
+                        strcat(message, buffer + 7); 
+                        write_answer(message); 
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
                     }
@@ -164,7 +167,7 @@ void translate_answer(char buffer[]){
                     }else if(analyse_answer("END", buffer)){
                         write_answer("auction has already finished.\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer("fechar\n"); //TO DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                        write_answer("auction successfully closed\n"); 
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
                     }
@@ -173,12 +176,12 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("no file to be sent, or some other problem\n");
                     }else if(analyse_answer("OK", buffer)){
-                        char command[4], answer[4], name[20], message[40];
+                        char command[4], answer[4], name[25], message[36];
                         memset(name, 0, sizeof(name));
                         memset(message, 0, sizeof(message));
                         ssize_t size;
                         sscanf(buffer, "%s %s %s %zd", command, answer, name, &size);
-                        char size_str[20]; 
+                        char size_str[9]; 
                         snprintf(size_str, sizeof(size_str), "%zd", size);
                         strcat(message, name);
                         strcat(message, " ");
@@ -193,9 +196,9 @@ void translate_answer(char buffer[]){
                     }else if(analyse_answer("ACC", buffer)){
                         write_answer("bid was accepted\n"); 
                     }else if(analyse_answer("REF", buffer)){
-                        write_answer("bid was refused because a larger bid has already been placed previously\n"); //TO DO
+                        write_answer("bid was refused because a larger bid has already been placed previously\n"); 
                     }else if(analyse_answer("ILG", buffer)){
-                        write_answer("you cannot make a bid in an auction hosted by yourself\n"); //TO DO
+                        write_answer("you cannot make a bid in an auction hosted by yourself\n"); 
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("you must login first\n");
                     }
@@ -290,7 +293,7 @@ void communication_udp(char buffer[], size_t bytes){
     e não um endereço IP (como é o caso), efetua um DNS Lookup. */
     errcode = getaddrinfo("tejo.tecnico.ulisboa.pt", PORT, &hints, &res);
     if (errcode != 0) {
-        printf("error in getaddrinfo");
+        puts("error in getaddrinfo");
         exit(1);
     }
 
@@ -370,7 +373,7 @@ void udp_action(char buffer[]) {
             strcat(message, current_uid);
             strcat(message, "\n");
             communication_udp(message, 11);
-        }else{printf("You must login first.\n");}
+        }else{puts("You must login first.");}
     }
     else if(strcmp(command, "mybids") == 0 || strcmp(command, "mb") == 0 ){ 
         if(strlen(current_uid)==6){
@@ -379,7 +382,7 @@ void udp_action(char buffer[]) {
             strcat(message, current_uid);
             strcat(message, "\n");
             communication_udp(message, 11);
-        }else{printf("You must login first.\n");}
+        }else{puts("You must login first.");}
         
     }
     else if(strcmp(command, "list") == 0 || strcmp(command, "l") == 0 ){ 
@@ -402,22 +405,6 @@ void udp_action(char buffer[]) {
 }
 
 
-/*int check_tcp(char buffer[]) {
-
-    char dest[4];  
-
-    strncpy(dest, buffer, 3);
-    dest[3] = '\0';  // Null-terminate the destination string
-
-    for (size_t i = 0; i < sizeof(tcp_input) / sizeof(tcp_input[0]); ++i) {
-        if (strcmp(dest, tcp_input[i]) == 0) {
-            return 1; // Match found
-        }
-    }
-
-    return 0; // No match found
-}*/ 
-//tive de fazer uma funçao nova porque os tcp_inputs já nao têm todos o mesmo tamanho, mas nao sei se a nova está certa
 
 int check_tcp(char buffer[]) {
     size_t buffer_len = strlen(buffer);
@@ -469,10 +456,21 @@ void tcp_action(char buffer[]) {
         }
     }
     else if(strcmp(command, "close") == 0){ 
-        strcpy(buffer, "CLS");
-        strcat(buffer, buffer + strlen(command)); 
-        function(buffer);
-        communication_tcp(buffer);
+
+        if(strlen(current_uid)==6){
+            if(verify_aid(buffer)) {
+            strcpy(message, "CLS");
+            strcat(message, " ");
+            strcat(message, current_uid);
+            strcat(message, " ");
+            strcat(message, current_uid_ps);
+            strcat(message, buffer + strlen(command));
+            communication_tcp(message);
+            }else{puts("invalid AID");}
+        }else{puts("You must login first.\n");}
+        
+
+        
     }
     else if(strcmp(command, "show_asset") == 0 || strcmp(command, "sa") == 0 ){ 
         
@@ -491,10 +489,8 @@ void tcp_action(char buffer[]) {
             strcat(message, " ");
             strcat(message, current_uid_ps);
             strcat(message, buffer + strlen(command));
-            strcat(message, "\n");
             communication_tcp(message);
-        }else{printf("You must login first.\n");}
-        function(buffer);
+        }else{puts("You must login first.\n");}
     }
     else {
         perror("invalid input");
