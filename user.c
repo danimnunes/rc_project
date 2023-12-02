@@ -11,7 +11,7 @@
 
 #define PORT "58011"
 #define IP "193.136.138.142"
-
+char port[5] = "58011", *ASIP = "tejo.tecnico.ulisboa.pt";
 int fd, errcode;
 ssize_t n;
 socklen_t addrlen; // Tamanho do endereço
@@ -231,7 +231,7 @@ void communication_tcp(char buffer[]){
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM; // TCP socket
 
-    errcode = getaddrinfo("tejo.tecnico.ulisboa.pt", PORT, &hints, &res);
+    errcode = getaddrinfo(ASIP, port, &hints, &res);
     if (errcode != 0) {
         exit(1);
     }
@@ -291,7 +291,7 @@ void communication_udp(char buffer[], size_t bytes){
     /* Busca informação do host "tejo.tecnico.ulisboa.pt", na porta especificada,
     guardando a informação nas `hints` e na `res`. Caso o host seja um nome
     e não um endereço IP (como é o caso), efetua um DNS Lookup. */
-    errcode = getaddrinfo("tejo.tecnico.ulisboa.pt", PORT, &hints, &res);
+    errcode = getaddrinfo(ASIP, port, &hints, &res);
     if (errcode != 0) {
         puts("error in getaddrinfo");
         exit(1);
@@ -498,11 +498,28 @@ void tcp_action(char buffer[]) {
 }
 
 
-int main() {
+int main(int argc, char *argv[]) {
     fd_set inputs, newfds;
     int max_fd = STDIN_FILENO;
-
-
+    if (argc == 3){
+        if (strcmp(argv[1], "-n") == 0){
+            ASIP = (char *)malloc(strlen(argv[2]) + 1);
+            strcpy(ASIP, argv[2]);
+        } else if (strcmp(argv[1], "-p") == 0){
+            strcpy(port, argv[2]);
+            if(atoi(port) < 0 || atoi(port) > 65535){
+                exit(1);
+            }
+        }
+    }
+    else if(argc == 5){
+        ASIP = (char *)malloc(strlen(argv[2]) + 1);
+        strcpy(ASIP, argv[2]);
+        strcpy(port, argv[4]);
+        if(atoi(port) < 0 || atoi(port) > 65535){
+            exit(1);
+        }
+    }
     // podemos ler so a primeira letra e depois comparar com o array dessa letra, para reduzir as comparações, ou comparar com todas simplesmente
 
 

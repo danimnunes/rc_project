@@ -10,7 +10,7 @@
 #include <sys/select.h>
 
 #define PORT "58011"
-
+char port[5]="58011";
 int udp_fd;
 int tcp_fd;
 ssize_t n;
@@ -18,8 +18,9 @@ socklen_t udp_addrlen;
 struct addrinfo udp_hints, *udp_res;
 struct sockaddr_in udp_addr;
 char buffer[128];
+int verbose_mode=0;
 
-void server() {
+void udp_setup(){
     // UDP setup
     if ((udp_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
         perror("socket");
@@ -32,7 +33,7 @@ void server() {
     udp_hints.ai_socktype = SOCK_DGRAM;
     udp_hints.ai_flags = AI_PASSIVE;
 
-    if (getaddrinfo(NULL, PORT, &udp_hints, &udp_res) != 0) {
+    if (getaddrinfo(NULL, port, &udp_hints, &udp_res) != 0) {
         perror("getaddrinfo");
         exit(1);
     }
@@ -43,10 +44,9 @@ void server() {
     }
 
     freeaddrinfo(udp_res);
+}
 
-    fd_set all_fds_read;
-    int max_fd;
-
+void tcp_setup(){
     // TCP setup
     if ((tcp_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket");
@@ -57,7 +57,7 @@ void server() {
     memset(&tcp_addr, 0, sizeof(tcp_addr));
     tcp_addr.sin_family = AF_INET;
     tcp_addr.sin_addr.s_addr = INADDR_ANY;
-    tcp_addr.sin_port = htons(atoi(PORT));
+    tcp_addr.sin_port = htons(atoi(port));
 
     if (bind(tcp_fd, (struct sockaddr*)&tcp_addr, sizeof(tcp_addr)) == -1) {
         perror("bind");
@@ -68,6 +68,12 @@ void server() {
         perror("listen");
         exit(1);
     }
+}
+
+void server() {
+
+    fd_set all_fds_read;
+    int max_fd;
 
     while (1) {
         FD_ZERO(&all_fds_read);
@@ -127,7 +133,41 @@ void server() {
     close(tcp_fd);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc == 3){
+        if (strcmp(argv[1], "-p") == 0){
+            strcpy(port, argv[2]);
+            if(atoi(port) < 0 || atoi(port) > 65535){
+                exit(1);
+            }
+        } else {
+        puts("Something went wrong with input.");
+        exit(1);
+        }
+    } else if (argc == 2){
+        if (strcmp(argv[1], "-v") == 0){
+            verbose_mode=1;
+        } else {
+        puts("Something went wrong with input.");
+        exit(1);
+        }
+    } else if (argc == 4){
+        if (strcmp(argv[1], "-p") == 0 && strcmp(argv[3], "-v")){
+            strcpy(port, argv[2]);
+            if(atoi(port) < 0 || atoi(port) > 65535){
+                exit(1);
+            }
+            verbose_mode=1;
+        } else {
+        puts("Something went wrong with input.");
+        exit(1);
+        }
+    } else {
+        puts("Something went wrong with input.");
+        exit(1);
+    }
+    udp_setup();
+    tcp_setup();
     server();
     return 0;
 }
