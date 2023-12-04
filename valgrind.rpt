@@ -1,0 +1,27 @@
+==6980== Memcheck, a memory error detector
+==6980== Copyright (C) 2002-2017, and GNU GPL'd, by Julian Seward et al.
+==6980== Using Valgrind-3.15.0 and LibVEX; rerun with -h for copyright info
+==6980== Command: ./user
+==6980== Parent PID: 103
+==6980== 
+==6980== Conditional jump or move depends on uninitialised value(s)
+==6980==    at 0x109714: analyse_record (user.c:62)
+==6980==    by 0x10A3B0: translate_answer (user.c:218)
+==6980==    by 0x10AE06: communication_udp (user.c:405)
+==6980==    by 0x10B408: udp_action (user.c:479)
+==6980==    by 0x10C071: main (user.c:643)
+==6980== 
+==6980== 
+==6980== Process terminating with default action of signal 2 (SIGINT)
+==6980==    at 0x4968F7A: select (select.c:41)
+==6980==    by 0x10BFBE: main (user.c:623)
+==6980== 
+==6980== HEAP SUMMARY:
+==6980==     in use at exit: 0 bytes in 0 blocks
+==6980==   total heap usage: 72 allocs, 72 frees, 27,261 bytes allocated
+==6980== 
+==6980== All heap blocks were freed -- no leaks are possible
+==6980== 
+==6980== Use --track-origins=yes to see where uninitialised values come from
+==6980== For lists of detected and suppressed errors, rerun with: -s
+==6980== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)

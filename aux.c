@@ -90,6 +90,7 @@ int verify_open_input(char name[], char start_value[], char time_active[]){
     } 
     return 1;
 }
+
 char *getSize(char asset_name[], char buffer[]) 
 { 
     // Store the content of the file
@@ -137,6 +138,7 @@ char *getData(char asset_name[], char buffer[])
   
     return buffer; 
 } 
+
 
 /*
 int verify_input(char buffer[]){

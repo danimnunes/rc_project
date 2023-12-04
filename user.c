@@ -23,9 +23,8 @@ hints - Estrutura que contém informações sobre o tipo de conexão que será e
 res - Localização onde a função getaddrinfo() armazenará informações sobre o endereço.
 */
 struct addrinfo hints, *res;
-struct sockaddr_in addr;
-char buffer[128]; // buffer para onde serão escritos os dados recebidos do servidor
-char current_uid[7], aux_uid[7];
+struct sockaddr_in addr; // buffer para onde serão escritos os dados recebidos do servidor
+char current_uid[7] , aux_uid[7];
 char current_uid_ps[9], aux_uid_ps[9];
 char tcp_input[][11] = {"open", "close", "show_asset", "bid", "sa", "b"};
 /*char input_l[][4] = {"login", "logout", "myauctions", "mybids", "list"};*/
@@ -55,6 +54,81 @@ int reply_matches(char sent[], char rcv[]){
     }
     return matches;
 }
+
+void analyse_record(char buffer[]){
+    printf("::::%s\n", buffer);
+    char *token="", message[500000];
+    token = strtok(buffer, " ");
+    strcat(message, "Host UID-> ");
+
+    strcat(message, token);
+
+    strcat(message, "\nAuction name -> ");
+
+    token = strtok(NULL, " ");
+    strcat(message, token);
+    strcat(message, "\nAsset file name -> ");
+
+    token = strtok(NULL, " ");
+    strcat(message, token);
+    strcat(message, "\nStart value -> ");
+
+    token = strtok(NULL, " ");
+    strcat(message, token);
+    strcat(message, "\nStart date -> ");
+    token = strtok(NULL, " ");
+    strcat(message, token);
+    strcat(message, "\nStart time -> ");
+    token = strtok(NULL, " ");
+    strcat(message, token);
+    strcat(message, "\nTime active -> ");
+
+    token = strtok(NULL, " ");
+    strcat(message, token);
+    token = strtok(NULL, " ");
+
+    int bid = 0;
+
+    while (token != NULL) {
+        // Process each token based on its type (e.g., 'RRC', 'B', 'E')
+
+        if (strcmp(token, "B") == 0) {
+            // Process bid information
+            bid++;
+            strcat(message, "\nBid info by UID: ");
+        } else if(bid==1) {
+            strcat(message, token);
+            bid++;
+        } else if(bid==2) {
+            strcat(message, "\nbid_value->");
+            strcat(message, token);
+            bid++;
+        } else if(bid==3) {
+            strcat(message, " \tbid_date->");
+            strcat(message, token);
+            bid++;
+        } else if(bid==4) {
+            strcat(message, " \tbid_time->");
+            strcat(message, token);
+            bid++;
+        } else if(bid==5) {
+            strcat(message, " \tbid_sec_time->");
+            strcat(message, token);
+            bid++;
+        } else if (strcmp(token, "E") == 0) {
+            strcat(message, "\nAuction ending info: ");
+            // Process end information
+        } else {
+            strcat(message, " ");
+            strcat(message, token);
+        }
+        if(bid==6) bid=0;
+        // Get the next token
+        token = strtok(NULL, " ");
+    }
+    write_answer(message); 
+}
+
 
 void translate_answer(char buffer[]){
     char command[4];
@@ -141,7 +215,7 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("that auction does not exist\n");
                     }else if(analyse_answer("OK", buffer)){
-                        write_answer(buffer); 
+                        analyse_record(buffer+7); 
                     }
                     break;
 
@@ -176,16 +250,14 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("no file to be sent, or some other problem\n");
                     }else if(analyse_answer("OK", buffer)){
-                        char command[4], answer[4], name[25], message[36];
+                        char command[4], answer[4], name[25], size[9], message[38];
                         memset(name, 0, sizeof(name));
+                        memset(size, 0, sizeof(size));
                         memset(message, 0, sizeof(message));
-                        ssize_t size;
-                        sscanf(buffer, "%s %s %s %zd", command, answer, name, &size);
-                        char size_str[9]; 
-                        snprintf(size_str, sizeof(size_str), "%zd", size);
+                        sscanf(buffer, "%s %s %s %s", command, answer, name, size);
                         strcat(message, name);
                         strcat(message, " ");
-                        strcat(message, size_str);
+                        strcat(message, size);
                         strcat(message, "\n");
                         write_answer(message); //TO DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
                     }
@@ -216,7 +288,7 @@ void translate_answer(char buffer[]){
 }
 
 void communication_tcp(char buffer[]){
-    char buffer2[128];
+    char buffer2[5000];
     memset(buffer2, 0, sizeof(buffer2));
     char cmd_sent[4], cmd_rcv[4];
     for(int i=0; i<3; i++){
@@ -224,7 +296,9 @@ void communication_tcp(char buffer[]){
     }
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1) {
+        puts("Error socket.");
         exit(1);
+        
     }
 
     memset(&hints, 0, sizeof hints);
@@ -233,6 +307,7 @@ void communication_tcp(char buffer[]){
 
     errcode = getaddrinfo(ASIP, port, &hints, &res);
     if (errcode != 0) {
+        puts("Error info.");
         exit(1);
     }
     /* Em TCP é necessário estabelecer uma ligação com o servidor primeiro (Handshake).
@@ -250,20 +325,25 @@ void communication_tcp(char buffer[]){
     }
 
     /* Lê 128 Bytes do servidor e guarda-os no buffer. */
-    n=read(fd, buffer2, 128);
+    char buffer3[1000000];
+    memset(buffer3, 0, sizeof(buffer3));
+    while(n != 0) {
+        n=read(fd, buffer2, 5000);
+        strcat(buffer3, buffer2);
+    }
     if (n == -1) {
         puts("Error reading from server.");
         exit(1);
     }
     for(int i=0; i<3; i++){
-        cmd_rcv[i]=buffer2[i];
+        cmd_rcv[i]=buffer3[i];
     }
     if(reply_matches(cmd_sent, cmd_rcv)){
-        translate_answer(buffer2);
+        translate_answer(buffer3);
     }else{
         puts("something went wrong communicating with server");
     }
-
+                            
     /* Desaloca a memória da estrutura `res` e fecha o socket */
     freeaddrinfo(res);
     close(fd);
@@ -273,6 +353,8 @@ void communication_udp(char buffer[], size_t bytes){
     char buffer2[6001];
     memset(buffer2, 0, sizeof(buffer2));
     char cmd_sent[4], cmd_rcv[4];
+    memset(cmd_sent, '\0', sizeof(cmd_sent));
+    memset(cmd_rcv, '\0', sizeof(cmd_rcv));
     for(int i=0; i<3; i++){
         cmd_sent[i]=buffer[i];
     }
@@ -422,12 +504,14 @@ int check_tcp(char buffer[]) {
 }
 
 void tcp_action(char buffer[]) {
-    char message[20];
+    char message[100000];
     char command[20];  // Tamanho suficiente para armazenar a palavra
+    memset(message, 0, sizeof(message));
+    memset(command, 0, sizeof(command));
     sscanf(buffer, "%s", command);
 
     if(strcmp(command, "open") == 0){ 
-        char name[11], asset_name[20], start_value[7], time_active[6];
+        char name[11], asset_name[25], start_value[7], time_active[6];
 
         if(strlen(current_uid)==6){
             sscanf(buffer, "%s %s %s %s %s", command, name, asset_name, start_value, time_active);
@@ -490,7 +574,10 @@ void tcp_action(char buffer[]) {
             strcat(message, current_uid_ps);
             strcat(message, buffer + strlen(command));
             communication_tcp(message);
-        }else{puts("You must login first.\n");}
+        } else {
+            puts("You must login first.\n");
+            
+        }    
     }
     else {
         perror("invalid input");
@@ -521,13 +608,16 @@ int main(int argc, char *argv[]) {
         }
     }
     // podemos ler so a primeira letra e depois comparar com o array dessa letra, para reduzir as comparações, ou comparar com todas simplesmente
-
-
+    memset(current_uid, 0, sizeof(current_uid));
+    memset(current_uid_ps, 0, sizeof(current_uid_ps));
+    memset(aux_uid, 0, sizeof(aux_uid));
+    memset(aux_uid_ps, 0, sizeof(aux_uid_ps));
     while(1) {
 
         FD_ZERO(&inputs); 
         FD_SET(max_fd, &inputs);
         newfds = inputs;
+        char inputtt[1024];
 
 
         if (select(max_fd + 1, &newfds, NULL, NULL, NULL) == -1) {
@@ -539,19 +629,18 @@ int main(int argc, char *argv[]) {
         // Check if stdin is ready for reading
         if (FD_ISSET(STDIN_FILENO, &newfds)) {
 
-            char buffer[1024];
-
+            memset(inputtt, 0, sizeof(inputtt));
             // Use fgets to read a line from stdin
-            if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+            if (fgets(inputtt, sizeof(inputtt), stdin) == NULL) {
                 perror("fgets");
                 exit(EXIT_FAILURE);
             }
             //strcat (buffer, "\n");
-            if (check_tcp(buffer)) {
-                tcp_action(buffer);
+            if (check_tcp(inputtt)) {
+                tcp_action(inputtt);
             }
             else {
-                udp_action(buffer);
+                udp_action(inputtt);
             }
             
         }
