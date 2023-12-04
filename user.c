@@ -9,6 +9,7 @@
 #include <string.h>
 #include "aux.h"
 
+
 #define PORT "58011"
 #define IP "193.136.138.142"
 char port[5] = "58011", *ASIP = "tejo.tecnico.ulisboa.pt";
@@ -56,7 +57,6 @@ int reply_matches(char sent[], char rcv[]){
 }
 
 void analyse_record(char buffer[]){
-    printf("::::%s\n", buffer);
     char *token="", message[500000];
     token = strtok(buffer, " ");
     strcat(message, "Host UID-> ");
@@ -224,10 +224,13 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("auction could not be started\n");
                     }else if(analyse_answer("OK", buffer)){
-                        char message[34];
+                        char command[4], answer[4], aid[4], message[34];
                         memset(message, 0, sizeof(message));
-                        strcat(message, "Assigned auction identifier: ");
-                        strcat(message, buffer + 7); //shit to afTer the command and the OK
+                        sscanf(buffer, "%s %s %s", command, answer, aid);
+                        strcat(message, "Assigned auction identifier:");
+                        strcat(message, " "); 
+                        strcat(message, aid);
+                        strcat(message, "\n");
                         write_answer(message); 
                     }else if(analyse_answer("NLG", buffer)){
                         write_answer("user not logged in\n");
@@ -259,7 +262,7 @@ void translate_answer(char buffer[]){
                         strcat(message, " ");
                         strcat(message, size);
                         strcat(message, "\n");
-                        write_answer(message); //TO DOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+                        write_answer(message); 
                     }
                     break;
                 case 10: //bid/BID
@@ -435,6 +438,12 @@ void udp_action(char buffer[]) {
             strcat(message, "\n");
             communication_udp(message, 20);
         }else{puts("You must login first.");}
+
+    }
+    else if(strcmp(command, "exit") == 0){ 
+        if(strlen(current_uid)==6){
+            puts("You must logout first.");
+        }
 
     }
     else if(strcmp(command, "unregister") == 0){ 
