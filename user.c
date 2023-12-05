@@ -443,6 +443,8 @@ void udp_action(char buffer[]) {
     else if(strcmp(command, "exit") == 0){ 
         if(strlen(current_uid)==6){
             puts("You must logout first.");
+        }else{
+            exit(1);
         }
 
     }

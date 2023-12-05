@@ -8,6 +8,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/select.h>
+#include <sys/stat.h>
 
 #define PORT "58011"
 char port[5]="58011";
@@ -19,6 +20,158 @@ struct addrinfo udp_hints, *udp_res;
 struct sockaddr_in udp_addr;
 char buffer[128];
 int verbose_mode=0;
+
+int createPass(char *uid, char *password){
+    uid[strcspn(uid, "\n")] = 0;
+    char login_name[35];
+    FILE *fp;
+    printf("uid::::%s\tstrlen::::%ld\n", uid, strlen(uid));
+    if(strlen(uid)!=6){
+        puts("strlen");
+        return 0;
+    }
+
+    sprintf(login_name, "USERS/%s/%s_pass.txt", uid, uid);
+    fp=fopen(login_name, "w");
+    if(fp==NULL){
+        puts("fp");
+        return 0;
+    }
+    fprintf(fp, "%s", password);
+    fclose(fp);
+    return 1;
+}
+
+int createLogin(char *uid){
+    uid[strcspn(uid, "\n")] = 0;
+    char login_name[35];
+    FILE *fp;
+    printf("uid::::%s\tstrlen::::%ld\n", uid, strlen(uid));
+    if(strlen(uid)!=6){
+        puts("strlen");
+        return 0;
+    }
+
+    sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+    fp=fopen(login_name, "w");
+    if(fp==NULL){
+        puts("fp");
+        return 0;
+    }
+    fprintf(fp, "Logged in\n");
+    fclose(fp);
+    return 1;
+}
+
+int eraseLogin(char *uid){
+    char login_name[35];
+
+    if(strlen(uid)!=6){
+        return 0;
+    }
+
+    sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+    unlink(login_name);
+    return 1;
+}
+
+int registerUid(char *uid, char *password){
+    uid[strcspn(uid, "\n")] = 0;
+    char login_name[35], pass_name[35];
+    char uid_dirname[17];
+    int ret;
+    FILE *fp, *fp_pass;
+    printf("uid::::%s\tstrlen::::%ld\n", uid, strlen(uid));
+    if(strlen(uid)!=6){
+        puts("strlen");
+        return 0;
+    }
+
+    sprintf(uid_dirname, "USERS/%06s", uid);
+
+    ret = mkdir(uid_dirname, 0700);
+    if(ret == -1){
+        puts("mkdir1");
+        return 0;
+    }
+
+    sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+    fp=fopen(login_name, "w");
+    if(fp==NULL){
+        puts("fp when registering");
+        return 0;
+    }
+    fprintf(fp, "Logged in\n");
+    puts("just wrote");
+
+    sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+    fp_pass=fopen(pass_name, "w");
+    if(fp_pass==NULL){
+        puts("fp");
+        return 0;
+    }
+    fprintf(fp_pass, "%s", password);
+
+    fclose(fp);
+    fclose(fp_pass);
+    return 1;
+}
+
+int unregisterUid(char *uid){
+    char login_name[35], pass_name[35], uid_dirname[17];
+    int ret;
+
+    if(strlen(uid)!=6){
+        return 0;
+    }
+
+    sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+    unlink(login_name);
+    sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+    unlink(pass_name);
+    
+    sprintf(uid_dirname, "USERS/%s", uid);
+
+    ret = rmdir(uid_dirname);
+    if(ret == -1){
+        puts("mkdir1");
+        return 0;
+    }
+
+    return 1;
+}
+
+
+int createAuction(int aid){
+    char aid_dirname[15];
+    char bids_dirname[20];
+    int ret;
+    printf("aid:::%d\n", aid);
+    if (aid < 1 || aid > 999)
+    {
+        puts("aid");
+        return 0;
+    }
+
+    sprintf(aid_dirname, "AUCTIONS/%03d", aid);
+
+    ret = mkdir(aid_dirname, 0700);
+    if(ret == -1){
+        puts("mkdir1");
+        return 0;
+    }
+
+    sprintf(bids_dirname, "AUCTIONS/%03d/BIDS", aid);
+
+    ret = mkdir(bids_dirname, 0700);
+    if(ret==-1){
+        rmdir(aid_dirname);
+        puts("mkdir2");
+        return 0;
+    }
+    return 1;
+    
+}
 
 void udp_setup(){
     // UDP setup
@@ -162,10 +315,19 @@ int main(int argc, char *argv[]) {
         puts("Something went wrong with input.");
         exit(1);
         }
-    } else {
-        puts("Something went wrong with input.");
-        exit(1);
     }
+    char inputtt[128];
+    memset(inputtt, 0, sizeof(inputtt));
+    // Use fgets to read a line from stdin
+    if (fgets(inputtt, sizeof(inputtt), stdin) == NULL) {
+        perror("fgets");
+        exit(EXIT_FAILURE);
+    }
+    char uid[10], password[10];
+    sscanf(inputtt, "%s %s\n", uid, password);
+    if(unregisterUid(uid)) {
+        puts("well done");
+    } else { puts("dumb.");}
     udp_setup();
     tcp_setup();
     server();
