@@ -21,26 +21,6 @@ struct sockaddr_in udp_addr;
 char buffer[128];
 int verbose_mode=0;
 
-int createPass(char *uid, char *password){
-    uid[strcspn(uid, "\n")] = 0;
-    char login_name[35];
-    FILE *fp;
-    printf("uid::::%s\tstrlen::::%ld\n", uid, strlen(uid));
-    if(strlen(uid)!=6){
-        puts("strlen");
-        return 0;
-    }
-
-    sprintf(login_name, "USERS/%s/%s_pass.txt", uid, uid);
-    fp=fopen(login_name, "w");
-    if(fp==NULL){
-        puts("fp");
-        return 0;
-    }
-    fprintf(fp, "%s", password);
-    fclose(fp);
-    return 1;
-}
 
 int createLogin(char *uid){
     uid[strcspn(uid, "\n")] = 0;
@@ -141,6 +121,16 @@ int unregisterUid(char *uid){
     return 1;
 }
 
+int checkAssetFile(char *fname){
+    struct stat filestat;
+    int ret_stat;
+
+    ret_stat=stat(fname, &filestat);
+
+    if(ret_stat==-1 || filestat.st_size==0)
+        return 0;
+    return (filestat.st_size);
+}
 
 int createAuction(int aid){
     char aid_dirname[15];
