@@ -37,7 +37,6 @@ int verify_login_input(char buffer[]){
     return verify_uid(uid);;
 }
 
-
 int verify_aid(char buffer[]){
     char command[20], aid[4];
     sscanf(buffer, "%s\t%s", command, aid);
