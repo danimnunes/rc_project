@@ -37,6 +37,28 @@ int verify_login_input(char buffer[]){
     return verify_uid(uid);;
 }
 
+int verify_logout_input(char buffer[]){
+
+    char command[20], uid[8], password[10];
+    sscanf(buffer, "%s\t%s\t%s", command, uid, password);
+    
+    if(strlen(password)!=8){
+        printf("Invalid input: password has 8 digits or characters\n");
+        return 0;
+    }
+    for (size_t i=0; i<strlen(password);i++){
+        if(!isdigit(password[i]) && !isalpha(password[i])){
+            printf("Invalid input: password\n");
+            return 0;
+        }
+    }
+
+    return verify_uid(uid);;
+}
+
+
+
+
 int verify_aid(char buffer[]){
     char command[20], aid[4];
     sscanf(buffer, "%s\t%s", command, aid);

@@ -2,6 +2,7 @@
 #define AUX_H
 
 int verify_login_input(char buffer[]);
+int verify_logout_input(char buffer[]);
 int verify_uid(char uid[]);
 int verify_aid(char buffer[]);
 int verify_open_input(char name[], char start_value[], char time_active[]);

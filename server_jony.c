@@ -137,9 +137,6 @@ int checkAssetFile(char *fname){
     return (filestat.st_size);
 }
 
-void unregister_cmd(char uid[], char password[]){
-    send_reply_udp("RUR TEST\n", 10);
-}
 
 // funcao para ver se a pass que esta no _pass.txt é a mesma introduzida pelo user
 int uid_pass_match(char uid[], char password[]){
@@ -153,6 +150,9 @@ int uid_pass_match(char uid[], char password[]){
     return !strcmp(pass_registered, password);
 
 }
+
+
+/////////////////   UDP   ////////////////////////////////////////////////////////////////////
 
 void login_cmd(char uid[], char password[]){
     struct stat stats;
@@ -189,7 +189,72 @@ void login_cmd(char uid[], char password[]){
 }
 
 void logout_cmd(char uid[], char password[]){
-    send_reply_udp("RLO TEST\n", 10);
+    struct stat stats;
+    char path[13];
+    sprintf(path, "USERS/%s", uid);
+    stat(path, &stats);
+
+    if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
+        // existe, temos de ver se o login já está feito
+        char login_name[35];
+        sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        if(uid_pass_match(uid, password)){   
+            if (access(login_name, F_OK) == -1){ // login nao está feito
+                send_reply_udp("RLO NOK\n", 9);
+                return;
+                
+            } else { //o login tava feito , fazemos logout
+
+                if (remove(login_name) == 0) {
+                    send_reply_udp("RLO OK\n", 9);
+                    return;
+                } else {
+                    send_reply_udp("RLO ERR\n", 10); // Erro ao remover o arquivo
+                    return;
+                }
+            } 
+        }
+    } else { // user nao existe 
+        send_reply_udp("RLO UNR\n", 9);
+        return;
+        
+    }     
+    send_reply_udp("RLO ERR\n", 10);
+}
+
+void unregister_cmd(char uid[], char password[]){
+    struct stat stats;
+    char path[13];
+    sprintf(path, "USERS/%s", uid);
+    stat(path, &stats);
+
+    if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
+        // existe, temos de ver se o login já está feito
+        char login_name[35], pass[35];
+        sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        sprintf(pass, "USERS/%s/%s_pass.txt", uid, uid);
+        if(uid_pass_match(uid, password)){   
+            if (access(login_name, F_OK) == -1){ // login nao está feito
+                send_reply_udp("UNR NOK\n", 9);
+                return;
+                
+            } else { //o login tava feito , fazemos logout
+
+                if (remove(login_name) == 0 && remove(pass) == 0) {
+                    send_reply_udp("UNR OK\n", 9);
+                    return;
+                } else {
+                    send_reply_udp("UNR ERR\n", 10); // Erro ao remover o arquivo
+                    return;
+                }
+            } 
+        }
+    } else { // user nao existe 
+        send_reply_udp("UNR UNR\n", 9);
+        return;
+        
+    }     
+    send_reply_udp("UNR ERR\n", 10);
 }
 
 void myauctions_cmd(char uid[]){
@@ -207,6 +272,13 @@ void list_cmd(){
 void showrecord_cmd(char aid[]){
     send_reply_udp("RRC TEST\n", 10);
 }
+
+
+
+
+/////////////////   TCP   ////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -230,7 +302,7 @@ void udp_message(char buffer[]){
                     
                     break;
                 case 1: //logout
-                    if(verify_login_input(buffer)){
+                    if(verify_logout_input(buffer)){
                         sscanf(buffer, "%s\t%s\t%s", command, uid, password);
                         logout_cmd(uid, password);
                     }else{
@@ -270,6 +342,8 @@ void udp_message(char buffer[]){
 
 }
 
+
+
 int createAuction(int aid){
     char aid_dirname[15];
     char bids_dirname[20];
@@ -300,6 +374,7 @@ int createAuction(int aid){
     return 1;
     
 }
+
 
 void udp_setup(){
     // UDP setup
