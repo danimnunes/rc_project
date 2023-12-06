@@ -135,7 +135,7 @@ void translate_answer(char buffer[]){
     sscanf(buffer,"%s",command);
     // Determine the action based on the matched string
     if(strcmp(command, "ERR")==0){
-        write_answer(buffer);
+        write_answer("ERR - Sent by server.");
         return;
     }
     for (size_t i = 0; i < sizeof(input_r) / sizeof(input_r[0]); i++) {
@@ -398,8 +398,6 @@ void communication_udp(char buffer[], size_t bytes){
         puts("error in recvfrom");
         exit(1);
     }
-
-
 
     for(int i=0; i<3; i++){
         cmd_rcv[i]=buffer2[i];

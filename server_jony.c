@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <sys/select.h>
 #include <sys/stat.h>
+#include "aux.h"
 
 #define PORT "58011"
 char port[5]="58011";
@@ -19,14 +20,20 @@ socklen_t udp_addrlen;
 struct addrinfo udp_hints, *udp_res;
 struct sockaddr_in udp_addr;
 char buffer[128];
+char cmds_udp[][4] = {"LIN", "LOU", "UNR", "LMA", "LMB", "LST", "SRC"};
 int verbose_mode=0;
 
+void send_reply_udp(char buffer[], size_t n){
+    if (sendto(udp_fd, buffer, n, 0, (struct sockaddr *)&udp_addr, udp_addrlen) == -1) {
+        perror("sendto");
+        exit(1);
+    }
+}
 
 int createLogin(char *uid){
     uid[strcspn(uid, "\n")] = 0;
     char login_name[35];
     FILE *fp;
-    printf("uid::::%s\tstrlen::::%ld\n", uid, strlen(uid));
     if(strlen(uid)!=6){
         puts("strlen");
         return 0;
@@ -61,7 +68,6 @@ int registerUid(char *uid, char *password){
     char uid_dirname[17];
     int ret;
     FILE *fp, *fp_pass;
-    printf("uid::::%s\tstrlen::::%ld\n", uid, strlen(uid));
     if(strlen(uid)!=6){
         puts("strlen");
         return 0;
@@ -82,7 +88,6 @@ int registerUid(char *uid, char *password){
         return 0;
     }
     fprintf(fp, "Logged in\n");
-    puts("just wrote");
 
     sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
     fp_pass=fopen(pass_name, "w");
@@ -130,6 +135,139 @@ int checkAssetFile(char *fname){
     if(ret_stat==-1 || filestat.st_size==0)
         return 0;
     return (filestat.st_size);
+}
+
+void unregister_cmd(char uid[], char password[]){
+    send_reply_udp("RUR TEST\n", 10);
+}
+
+// funcao para ver se a pass que esta no _pass.txt é a mesma introduzida pelo user
+int uid_pass_match(char uid[], char password[]){
+    char pass_name[35], pass_registered[10];
+    FILE *fp;
+
+    sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+    fp=fopen(pass_name, "r");
+    fgets(pass_registered, 10, fp);
+
+    return !strcmp(pass_registered, password);
+
+}
+
+void login_cmd(char uid[], char password[]){
+    struct stat stats;
+    char path[13];
+    sprintf(path, "USERS/%s", uid);
+    stat(path, &stats);
+
+    if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
+        // existe, temos de ver se o login já está feito
+        char login_name[35];
+        sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        if(uid_pass_match(uid, password)){   
+            if (access(login_name, F_OK) == -1){
+             
+                if(createLogin(uid)){
+                    send_reply_udp("RLI OK\n", 8);
+                    return;
+                }
+            } else { //o login já tava feito , mandamos ok na mesma? o tejo manda ok na mes
+                send_reply_udp("RLI OK\n", 9);
+                return;
+            } 
+        } else { //pass e uid nao combinam
+            send_reply_udp("RLI NOK\n", 9);
+            return;
+        }
+    } else { // temos de criar a diretoria para o uid
+        if(registerUid(uid, password)){
+            send_reply_udp("RLI REG\n", 9);
+            return;
+        }
+    }     
+    send_reply_udp("RLI ERR\n", 10); //sei que é só err, mas deixei o rli para sabermos de onde vem
+}
+
+void logout_cmd(char uid[], char password[]){
+    send_reply_udp("RLO TEST\n", 10);
+}
+
+void myauctions_cmd(char uid[]){
+    send_reply_udp("RMA TEST\n", 10);
+}
+
+void mybids_cmd(char uid[]){
+    send_reply_udp("RMB TEST\n", 10);
+}
+
+void list_cmd(){
+    send_reply_udp("RLS TEST\n", 10);
+}
+
+void showrecord_cmd(char aid[]){
+    send_reply_udp("RRC TEST\n", 10);
+}
+
+
+
+void udp_message(char buffer[]){
+    char command[6];
+    sscanf(buffer, "%s", command);
+    if(buffer[strlen(buffer)-1]!='\n'){
+        send_reply_udp("ERR\n", 5);
+    } 
+    for (size_t i = 0; i < sizeof(cmds_udp) / sizeof(cmds_udp[0]); i++) {
+        if(strncmp(cmds_udp[i], command, 3)==0){
+            char uid[8], password[10], aid[5];
+            switch (i) {
+                case 0: //login
+                    if(verify_login_input(buffer)){
+                        sscanf(buffer, "%s\t%s\t%s", command, uid, password);
+                        login_cmd(uid, password);
+                    }else{
+                        send_reply_udp("ERR\n", 5);
+                    }// ou NOK ou assim tenho de ver
+                    
+                    break;
+                case 1: //logout
+                    if(verify_login_input(buffer)){
+                        sscanf(buffer, "%s\t%s\t%s", command, uid, password);
+                        logout_cmd(uid, password);
+                    }else{
+                        send_reply_udp("ERR\n", 5);
+                    }// ou NOK ou assim tenho de ver
+                    
+                    break;
+                case 2: //unregister
+                    if(verify_login_input(buffer)){
+                        sscanf(buffer, "%s\t%s\t%s", command, uid, password);
+                        unregister_cmd(uid, password);
+                    }else{
+                        send_reply_udp("ERR\n", 5);
+                    }// ou NOK ou assim tenho de ver
+                    
+                    break;
+                case 3: //myauctions
+                    sscanf(buffer, "%s %s\n", command, uid);
+                    myauctions_cmd(uid);
+                    break;
+                case 4: //mybids
+                    sscanf(buffer, "%s %s\n", command, uid);
+                    mybids_cmd(uid);
+                    break;
+                case 5: //list
+                    list_cmd();
+                    break;
+                case 6: //show_record
+                    sscanf(buffer, "%s %s\n", command, aid);
+                    showrecord_cmd(aid);
+                    break;
+                default:
+                    send_reply_udp("ERR\n", 5);
+            }
+        }
+    }
+
 }
 
 int createAuction(int aid){
@@ -237,12 +375,9 @@ void server() {
                 exit(1);
             }
             
+            udp_message(buffer);
             printf("[UDP] Received: %.*s\n", (int)n, buffer);
 
-            if (sendto(udp_fd, buffer, n, 0, (struct sockaddr *)&udp_addr, udp_addrlen) == -1) {
-                perror("sendto");
-                exit(1);
-            }
         }
 
         if (FD_ISSET(tcp_fd, &all_fds_read)) {
@@ -276,6 +411,21 @@ void server() {
     close(tcp_fd);
 }
 
+void test(){
+    char inputtt[128];
+    memset(inputtt, 0, sizeof(inputtt));
+    // Use fgets to read a line from stdin
+    if (fgets(inputtt, sizeof(inputtt), stdin) == NULL) {
+        perror("fgets");
+        exit(EXIT_FAILURE);
+    }
+    char uid[10], password[10];
+    sscanf(inputtt, "%s %s\n", uid, password);
+    if(unregisterUid(uid)) {
+        puts("well done");
+    } else { puts("dumb.");}
+}
+
 int main(int argc, char *argv[]) {
     if (argc == 3){
         if (strcmp(argv[1], "-p") == 0){
@@ -306,18 +456,8 @@ int main(int argc, char *argv[]) {
         exit(1);
         }
     }
-    char inputtt[128];
-    memset(inputtt, 0, sizeof(inputtt));
-    // Use fgets to read a line from stdin
-    if (fgets(inputtt, sizeof(inputtt), stdin) == NULL) {
-        perror("fgets");
-        exit(EXIT_FAILURE);
-    }
-    char uid[10], password[10];
-    sscanf(inputtt, "%s %s\n", uid, password);
-    if(unregisterUid(uid)) {
-        puts("well done");
-    } else { puts("dumb.");}
+    // test();
+
     udp_setup();
     tcp_setup();
     server();
