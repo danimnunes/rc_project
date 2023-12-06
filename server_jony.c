@@ -67,7 +67,7 @@ int registerUid(char *uid, char *password){
         return 0;
     }
 
-    sprintf(uid_dirname, "USERS/%06s", uid);
+    sprintf(uid_dirname, "USERS/%6s", uid);
 
     ret = mkdir(uid_dirname, 0700);
     if(ret == -1){
