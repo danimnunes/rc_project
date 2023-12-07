@@ -19,9 +19,11 @@ ssize_t n;
 socklen_t udp_addrlen;
 struct addrinfo udp_hints, *udp_res;
 struct sockaddr_in udp_addr;
-char buffer[128];
+char buffer[6001];
+char cmds_tcp[][4] = {"OPA", "CLS", "SAS", "BID"};
 char cmds_udp[][4] = {"LIN", "LOU", "UNR", "LMA", "LMB", "LST", "SRC"};
 int verbose_mode=0;
+int auctions_count=0;
 
 void send_reply_udp(char buffer[], size_t n){
     if (sendto(udp_fd, buffer, n, 0, (struct sockaddr *)&udp_addr, udp_addrlen) == -1) {
@@ -102,29 +104,6 @@ int registerUid(char *uid, char *password){
     return 1;
 }
 
-int unregisterUid(char *uid){
-    char login_name[35], pass_name[35], uid_dirname[17];
-    int ret;
-
-    if(strlen(uid)!=6){
-        return 0;
-    }
-
-    sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
-    unlink(login_name);
-    sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
-    unlink(pass_name);
-    
-    sprintf(uid_dirname, "USERS/%s", uid);
-
-    ret = rmdir(uid_dirname);
-    if(ret == -1){
-        puts("mkdir1");
-        return 0;
-    }
-
-    return 1;
-}
 
 int checkAssetFile(char *fname){
     struct stat filestat;
@@ -142,10 +121,23 @@ int checkAssetFile(char *fname){
 int uid_pass_match(char uid[], char password[]){
     char pass_name[35], pass_registered[10];
     FILE *fp;
+    int size=0;
 
     sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+    puts("will open pass.txt::");
     fp=fopen(pass_name, "r");
+    puts("just opened::");
+    fseek (fp, 0, SEEK_END);
+    size = ftell(fp);
+    printf("tamanho do ficheiro: %d\n", size);
+    if (size == 0) {
+
+        return 0;
+    }
+    fseek (fp, 0, SEEK_SET);
     fgets(pass_registered, 10, fp);
+
+    printf("ps got: %s, old ps:%s\n", password, pass_registered);
 
     return !strcmp(pass_registered, password);
 
@@ -227,7 +219,6 @@ void unregister_cmd(char uid[], char password[]){
     char path[13];
     sprintf(path, "USERS/%s", uid);
     stat(path, &stats);
-
     if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
         // existe, temos de ver se o login já está feito
         char login_name[35], pass[35];
@@ -235,26 +226,25 @@ void unregister_cmd(char uid[], char password[]){
         sprintf(pass, "USERS/%s/%s_pass.txt", uid, uid);
         if(uid_pass_match(uid, password)){   
             if (access(login_name, F_OK) == -1){ // login nao está feito
-                send_reply_udp("UNR NOK\n", 9);
+                send_reply_udp("RUR NOK\n", 9);
                 return;
                 
             } else { //o login tava feito , fazemos logout
-
-                if (remove(login_name) == 0 && remove(pass) == 0) {
-                    send_reply_udp("UNR OK\n", 9);
+                if (!(unlink(login_name) && unlink(pass))){
+                    send_reply_udp("RUR OK\n", 7);
                     return;
-                } else {
-                    send_reply_udp("UNR ERR\n", 10); // Erro ao remover o arquivo
-                    return;
-                }
+                } 
             } 
+        } else {
+            send_reply_udp("RUR NOK\n", 9);
+            return;
         }
     } else { // user nao existe 
-        send_reply_udp("UNR UNR\n", 9);
+        send_reply_udp("RUR UNR\n", 9);
         return;
         
     }     
-    send_reply_udp("UNR ERR\n", 10);
+    send_reply_udp("RUR ERR\n", 10);
 }
 
 void myauctions_cmd(char uid[]){
@@ -272,13 +262,6 @@ void list_cmd(){
 void showrecord_cmd(char aid[]){
     send_reply_udp("RRC TEST\n", 10);
 }
-
-
-
-
-/////////////////   TCP   ////////////////////////////////////////////////////////////////////
-
-//////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
@@ -311,8 +294,11 @@ void udp_message(char buffer[]){
                     
                     break;
                 case 2: //unregister
+                    puts("::unregister cmd");
                     if(verify_login_input(buffer)){
+                        puts("getting uid and ps::");
                         sscanf(buffer, "%s\t%s\t%s", command, uid, password);
+                        puts("will enter unregister_cmd::");
                         unregister_cmd(uid, password);
                     }else{
                         send_reply_udp("ERR\n", 5);
@@ -343,10 +329,23 @@ void udp_message(char buffer[]){
 }
 
 
+/////////////////   TCP   ////////////////////////////////////////////////////////////////////
 
-int createAuction(int aid){
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+void send_reply_tcp(char buffer[]){
+    
+    n=write(tcp_fd, buffer,strlen(buffer));
+    if (n == -1) {
+        puts("Error writing to server.");
+        exit(1);
+    }
+}
+
+int createAuction(int aid, char fdata[], char fsize[], char start_data[]){
     char aid_dirname[15];
     char bids_dirname[20];
+    char asset_dirname[20];
     int ret;
     printf("aid:::%d\n", aid);
     if (aid < 1 || aid > 999)
@@ -367,12 +366,140 @@ int createAuction(int aid){
 
     ret = mkdir(bids_dirname, 0700);
     if(ret==-1){
-        rmdir(aid_dirname);
+        rmdir(bids_dirname);
         puts("mkdir2");
         return 0;
     }
+
+    sprintf(asset_dirname, "AUCTIONS/%03d/ASSET", aid);
+
+    ret = mkdir(asset_dirname, 0700);
+    if(ret==-1){
+        rmdir(asset_dirname);
+        puts("mkdir2");
+        return 0;
+    }
+
+     //nao sei se e assim q é suposto guardar o ficheiro
+    //fwrite(fdata, 1,atoi(fsize), fp); //nao sei se e assim q é suposto guardar o ficheiro
+    
+
     return 1;
     
+}
+
+void open_cmd(char buffer[]){
+    struct stat stats;
+    char path[15];
+    char uid[8], password[10], name[11], start_value[7], timeactive[6], fname[25], fsize[9], fdata[100000];
+    sscanf(buffer, "%s %s %s %s %s %s %s %s\n", uid, password, name, start_value, timeactive, fname, fsize, fdata);
+    sprintf(path, "USERS/%s", uid);
+    stat(path, &stats);
+    char start_data[100];
+    char start_datetime[4]="HHMM", start_fulltime[4]="323";
+
+    if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
+        // existe, temos de ver se o login já está feito
+        char login_name[35];
+        sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        if(uid_pass_match(uid, password)){   
+            if (access(login_name, F_OK) == -1){ // login nao está feito
+                send_reply_tcp("ROA NLG\n");
+                return;
+            }
+        } else {
+            send_reply_tcp("ROA ERR\n");
+                return;
+        }
+        puts("will create auction");
+
+
+        if(createAuction(++auctions_count, fdata, fsize, start_data)){ //criamos a pasta auctions/bids e asset agr temos de por la o ex: START_001.txt e o Picasso_01.jpg
+            char message[12];
+            FILE *fp, *fp_asset;
+            char start_name[30], asset_path[50];
+            sprintf(start_name, "AUCTIONS/%03d/START_%03d.txt", auctions_count, auctions_count);
+            fp=fopen(start_name, "w");
+            if(fp==NULL){
+                puts("fp");
+            }
+            puts("will write");
+            sprintf(start_data, "%s %s %s %s %s %s %s", uid, name, fname, start_value, timeactive, start_datetime, start_fulltime);
+
+            // aqui supostamente fazia o file START E DEPOIS AINDA FALTA O DO ASSET MM
+            if(fwrite(start_data, 1, strlen(start_data),fp)){
+                puts("nop");
+            }
+            fclose(fp);
+            sprintf(asset_path, "AUCTIONS/%03d/ASSET/%s", auctions_count, fname);
+            fp_asset=fopen(asset_path, "w");
+            if(fp_asset==NULL){
+                puts("fp_asset");
+            }
+            fclose(fp_asset);
+            //depois temos de fazer tbm o asset file com o fname e la dentro a fdata algo assim:
+            //fwrite(fdata, 1, fsize, fp_do_ficheiro);
+            sprintf(message, "ROA OK %03d\n", auctions_count);
+            send_reply_tcp(message);
+        }
+    }
+    
+
+}
+
+void close_cmd(char buffer[]){}
+
+void showasset_cmd(char buffer[]){}
+
+void bid_cmd(char buffer[]){}
+
+
+void tcp_message(char buffer[]){
+    char command[6];
+    sscanf(buffer, "%s", command);
+    if(buffer[strlen(buffer)-1]!='\n'){
+        send_reply_udp("ERR\n", 5);
+    } 
+    for (size_t i = 0; i < sizeof(cmds_tcp) / sizeof(cmds_tcp[0]); i++) {
+        puts("comparing");
+        puts(cmds_tcp[i]);
+        puts(command);
+        if(strncmp(cmds_tcp[i], command, 3)==0){
+            switch (i) {
+                case 0: //open
+                    puts("open case");
+                    if(verify_login_input(buffer)){
+                        puts("login ok");
+                        open_cmd(buffer + 4);
+                    }else{
+                        puts("login not ok");
+                        send_reply_tcp("ERR\n");
+                    }// ou NOK ou assim tenho de ver
+                    
+                    return;
+                case 1: //close
+                    if(verify_logout_input(buffer)){
+                        close_cmd(buffer);
+                    }else{
+                        send_reply_udp("ERR\n", 5);
+                    }// ou NOK ou assim tenho de ver
+                    break;
+                case 2: //show_asset
+                    showasset_cmd(buffer);                    
+                    break;
+                case 3: //bid
+                    if(verify_logout_input(buffer)){
+                        bid_cmd(buffer);
+                    }else{
+                        send_reply_udp("ERR\n", 5);
+                    }// ou NOK ou assim tenho de ver
+                    break;
+                default:
+                    send_reply_udp("ERR\n", 5);
+            }
+        }
+    }
+
 }
 
 
@@ -450,8 +577,8 @@ void server() {
                 exit(1);
             }
             
-            udp_message(buffer);
             printf("[UDP] Received: %.*s\n", (int)n, buffer);
+            udp_message(buffer);
 
         }
 
@@ -465,8 +592,11 @@ void server() {
                 exit(1);
             }
 
-            n = read(tcp_socket,buffer, 128);
+            n = read(tcp_socket,buffer, 6000);
             if(n==-1)exit(1);
+            printf("[TCP] Received: %.*s\n", (int)n, buffer);
+            tcp_message(buffer);
+
 
             // Aqui você pode adicionar código para processar as mensagens recebidas do cliente TCP
             // Provavelmente, você quer criar uma função ou chamada específica para lidar com as operações de login, logout, etc.
@@ -496,9 +626,7 @@ void test(){
     }
     char uid[10], password[10];
     sscanf(inputtt, "%s %s\n", uid, password);
-    if(unregisterUid(uid)) {
-        puts("well done");
-    } else { puts("dumb.");}
+    
 }
 
 int main(int argc, char *argv[]) {

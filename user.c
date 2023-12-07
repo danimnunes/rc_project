@@ -393,7 +393,10 @@ void communication_udp(char buffer[], size_t bytes){
     /* Recebe 128 Bytes do servidor e guarda-os no buffer.
        As variáveis `addr` e `addrlen` não são usadas pois não foram inicializadas. */
     addrlen = sizeof(addr);
-    n = recvfrom(fd, buffer2, 6001, 0, (struct sockaddr *)&addr, &addrlen);
+    n=0;
+    while(n==0){
+        n = recvfrom(fd, buffer2, 6001, 0, (struct sockaddr *)&addr, &addrlen);
+    }
     if (n == -1) {
         puts("error in recvfrom");
         exit(1);
