@@ -52,6 +52,38 @@ int createLogin(char *uid){
     return 1;
 }
 
+int create_first_Login(char *uid, char *password){
+    uid[strcspn(uid, "\n")] = 0;
+    char login_name[35], pass_name[35];;
+    FILE *fp, *fp_pass;
+    if(strlen(uid)!=6){
+        puts("strlen");
+        return 0;
+    }
+
+    sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+    fp=fopen(login_name, "w");
+    if(fp==NULL){
+        puts("fp");
+        return 0;
+    }
+    fprintf(fp, "Logged in\n");
+
+
+    sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+    fp_pass=fopen(pass_name, "w");
+    if(fp_pass==NULL){
+        puts("fp");
+        return 0;
+    }
+    fprintf(fp_pass, "%s", password);
+
+
+    fclose(fp);
+    fclose(fp_pass);
+    return 1;
+}
+
 int eraseLogin(char *uid){
     char login_name[35];
 
@@ -124,12 +156,9 @@ int uid_pass_match(char uid[], char password[]){
     int size=0;
 
     sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
-    puts("will open pass.txt::");
     fp=fopen(pass_name, "r");
-    puts("just opened::");
     fseek (fp, 0, SEEK_END);
     size = ftell(fp);
-    printf("tamanho do ficheiro: %d\n", size);
     if (size == 0) {
 
         return 0;
@@ -137,11 +166,12 @@ int uid_pass_match(char uid[], char password[]){
     fseek (fp, 0, SEEK_SET);
     fgets(pass_registered, 10, fp);
 
-    printf("ps got: %s, old ps:%s\n", password, pass_registered);
 
     return !strcmp(pass_registered, password);
 
 }
+
+
 
 
 /////////////////   UDP   ////////////////////////////////////////////////////////////////////
@@ -155,8 +185,18 @@ void login_cmd(char uid[], char password[]){
     if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
         // existe, temos de ver se o login já está feito
         char login_name[35];
+        char pass_name[35];
         sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
-        if(uid_pass_match(uid, password)){   
+        sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+
+        if (access(login_name, F_OK) == -1 && access(pass_name, F_OK) == -1){  // caso em que a diretoria existe mas não há ficheiro de login nem passe porque foi feito unregister antes
+            if(create_first_Login(uid, password)){
+                send_reply_udp("RLI OK\n", 8);
+                return;
+            }
+        }
+        
+        else if(uid_pass_match(uid, password)){     // caso em que a diretoria existe e está lá o ficheiro de pass, ou seja nao fooi feito unregister
             if (access(login_name, F_OK) == -1){
              
                 if(createLogin(uid)){
@@ -164,14 +204,17 @@ void login_cmd(char uid[], char password[]){
                     return;
                 }
             } else { //o login já tava feito , mandamos ok na mesma? o tejo manda ok na mes
-                send_reply_udp("RLI OK\n", 9);
+                send_reply_udp("RLI OK\n", 8);
                 return;
             } 
-        } else { //pass e uid nao combinam
+        } 
+
+        else { //pass e uid nao combinam
             send_reply_udp("RLI NOK\n", 9);
             return;
         }
-    } else { // temos de criar a diretoria para o uid
+    } 
+    else { // temos de criar a diretoria para o uid
         if(registerUid(uid, password)){
             send_reply_udp("RLI REG\n", 9);
             return;
@@ -188,8 +231,18 @@ void logout_cmd(char uid[], char password[]){
 
     if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
         // existe, temos de ver se o login já está feito
+
         char login_name[35];
+        char pass_name[35];
         sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+
+        if (access(login_name, F_OK) == -1 && access(pass_name, F_OK) == -1){  // caso em que a diretoria existe mas não há ficheiro de login nem passe porque foi feito unregister antes
+            
+            send_reply_udp("RLO NOK\n", 9);
+            return;
+        }
+        
         if(uid_pass_match(uid, password)){   
             if (access(login_name, F_OK) == -1){ // login nao está feito
                 send_reply_udp("RLO NOK\n", 9);
@@ -198,15 +251,16 @@ void logout_cmd(char uid[], char password[]){
             } else { //o login tava feito , fazemos logout
 
                 if (remove(login_name) == 0) {
-                    send_reply_udp("RLO OK\n", 9);
+                    send_reply_udp("RLO OK\n", 8);
                     return;
                 } else {
-                    send_reply_udp("RLO ERR\n", 10); // Erro ao remover o arquivo
+                    send_reply_udp("RLO ERR\n", 9); // Erro ao remover o arquivo
                     return;
                 }
             } 
         }
-    } else { // user nao existe 
+    } 
+    else { // user nao existe 
         send_reply_udp("RLO UNR\n", 9);
         return;
         
@@ -224,14 +278,21 @@ void unregister_cmd(char uid[], char password[]){
         char login_name[35], pass[35];
         sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
         sprintf(pass, "USERS/%s/%s_pass.txt", uid, uid);
+
+        if (access(login_name, F_OK) == -1 && access(pass, F_OK) == -1){  // caso em que a diretoria existe mas não há ficheiro de login nem passe porque foi feito unregister antes
+            
+            send_reply_udp("RUR NOK\n", 8);
+            return;
+        }
+
         if(uid_pass_match(uid, password)){   
             if (access(login_name, F_OK) == -1){ // login nao está feito
                 send_reply_udp("RUR NOK\n", 9);
                 return;
                 
             } else { //o login tava feito , fazemos logout
-                if (!(unlink(login_name) && unlink(pass))){
-                    send_reply_udp("RUR OK\n", 7);
+                if (remove(login_name) == 0 && remove(pass) == 0) {
+                    send_reply_udp("RUR OK\n", 9);
                     return;
                 } 
             } 
@@ -294,11 +355,8 @@ void udp_message(char buffer[]){
                     
                     break;
                 case 2: //unregister
-                    puts("::unregister cmd");
                     if(verify_login_input(buffer)){
-                        puts("getting uid and ps::");
                         sscanf(buffer, "%s\t%s\t%s", command, uid, password);
-                        puts("will enter unregister_cmd::");
                         unregister_cmd(uid, password);
                     }else{
                         send_reply_udp("ERR\n", 5);
@@ -340,14 +398,16 @@ void send_reply_tcp(char buffer[]){
         puts("Error writing to server.");
         exit(1);
     }
+
 }
+
+
 
 int createAuction(int aid, char fdata[], char fsize[], char start_data[]){
     char aid_dirname[15];
     char bids_dirname[20];
     char asset_dirname[20];
     int ret;
-    printf("aid:::%d\n", aid);
     if (aid < 1 || aid > 999)
     {
         puts("aid");
@@ -401,7 +461,16 @@ void open_cmd(char buffer[]){
     if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
         // existe, temos de ver se o login já está feito
         char login_name[35];
+        char pass_name[35];
         sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+
+        if (access(login_name, F_OK) == -1 && access(pass_name, F_OK) == -1){  // caso em que a diretoria existe mas não há ficheiro de login nem passe porque foi feito unregister antes
+            
+            send_reply_tcp("ROA NLG\n");
+            return;
+        }
+
         if(uid_pass_match(uid, password)){   
             if (access(login_name, F_OK) == -1){ // login nao está feito
                 send_reply_tcp("ROA NLG\n");
@@ -411,7 +480,6 @@ void open_cmd(char buffer[]){
             send_reply_tcp("ROA ERR\n");
                 return;
         }
-        puts("will create auction");
 
 
         if(createAuction(++auctions_count, fdata, fsize, start_data)){ //criamos a pasta auctions/bids e asset agr temos de por la o ex: START_001.txt e o Picasso_01.jpg
@@ -423,11 +491,10 @@ void open_cmd(char buffer[]){
             if(fp==NULL){
                 puts("fp");
             }
-            puts("will write");
             sprintf(start_data, "%s %s %s %s %s %s %s", uid, name, fname, start_value, timeactive, start_datetime, start_fulltime);
 
             // aqui supostamente fazia o file START E DEPOIS AINDA FALTA O DO ASSET MM
-            if(fwrite(start_data, 1, strlen(start_data),fp)){
+            if(fwrite(start_data, 1, strlen(start_data),fp) == -1){
                 puts("nop");
             }
             fclose(fp);
@@ -439,6 +506,7 @@ void open_cmd(char buffer[]){
             fclose(fp_asset);
             //depois temos de fazer tbm o asset file com o fname e la dentro a fdata algo assim:
             //fwrite(fdata, 1, fsize, fp_do_ficheiro);
+
             sprintf(message, "ROA OK %03d\n", auctions_count);
             send_reply_tcp(message);
         }

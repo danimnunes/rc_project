@@ -224,6 +224,7 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("auction could not be started\n");
                     }else if(analyse_answer("OK", buffer)){
+                        printf("msg recebida do server depois de fazer open: %s\n", buffer);
                         char command[4], answer[4], aid[4], message[34];
                         memset(message, 0, sizeof(message));
                         sscanf(buffer, "%s %s %s", command, answer, aid);
