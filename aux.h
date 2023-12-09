@@ -1,6 +1,8 @@
 #ifndef AUX_H
 #define AUX_H
 
+void getCurrentTime(char timestr[20]);
+int countAuctionDirectories(const char *path);
 int verify_login_input(char buffer[]);
 int verify_logout_input(char buffer[]);
 int verify_uid(char uid[]);

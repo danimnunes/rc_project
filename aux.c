@@ -2,6 +2,60 @@
 #include "string.h"
 #include "stdio.h"
 #include "ctype.h"
+#include <stdlib.h>
+#include <dirent.h>
+#include <time.h>
+
+void getCurrentTime(char timestr[20]) {
+    time_t fulltime;
+    struct tm *currenttime;
+
+    time(&fulltime);
+    currenttime = gmtime(&fulltime);
+
+    sprintf(timestr, "%4d-%02d-%02d %02d:%02d:%02d",
+            currenttime->tm_year + 1900, currenttime->tm_mon + 1, currenttime->tm_mday,
+            currenttime->tm_hour, currenttime->tm_min, currenttime->tm_sec);
+}
+
+int countAuctionDirectories(const char *path) {
+    DIR *auctionDirectory;
+    struct dirent *entry;
+    int count = 0;
+
+    // Open the "AUCTIONS" directory
+    auctionDirectory = opendir(path);
+
+    // Check if the directory is opened successfully
+    if (auctionDirectory == NULL) {
+        perror("Error opening AUCTIONS directory");
+        return -1; // Return an error code
+    }
+
+    // Iterate through each entry in the "AUCTIONS" directory
+    while ((entry = readdir(auctionDirectory)) != NULL) {
+        // Ignore '.' and '..' entries
+        if (entry->d_type == DT_DIR &&
+            strcmp(entry->d_name, ".") != 0 &&
+            strcmp(entry->d_name, "..") != 0) {
+
+            // Check if the entry is a direct child of "AUCTIONS"
+            char subdirectoryPath[1000];  // Adjust the size as needed
+            snprintf(subdirectoryPath, sizeof(subdirectoryPath), "%s/%s", path, entry->d_name);
+
+            DIR *subdirectory = opendir(subdirectoryPath);
+            if (subdirectory != NULL) {
+                closedir(subdirectory);
+                count++;
+            }
+        }
+    }
+
+    // Close the "AUCTIONS" directory
+    closedir(auctionDirectory);
+
+    return count;
+}
 
 int verify_uid(char uid[]){
     if(strlen(uid)!=6){

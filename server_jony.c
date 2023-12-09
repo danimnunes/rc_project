@@ -10,11 +10,13 @@
 #include <sys/select.h>
 #include <sys/stat.h>
 #include "aux.h"
+#include <time.h>
+
 
 #define PORT "58011"
 char port[5]="58011";
 int udp_fd;
-int tcp_fd;
+int tcp_fd, tcp_socket;
 ssize_t n;
 socklen_t udp_addrlen;
 struct addrinfo udp_hints, *udp_res;
@@ -392,12 +394,13 @@ void udp_message(char buffer[]){
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 void send_reply_tcp(char buffer[]){
-    
-    n=write(tcp_fd, buffer,strlen(buffer));
+    printf("Buffer contents: %s\n", buffer);
+    n = write(tcp_socket, buffer, strlen(buffer));
     if (n == -1) {
-        puts("Error writing to server.");
+        perror("Error writing to server");
         exit(1);
     }
+
 
 }
 
@@ -451,12 +454,24 @@ int createAuction(int aid, char fdata[], char fsize[], char start_data[]){
 void open_cmd(char buffer[]){
     struct stat stats;
     char path[15];
-    char uid[8], password[10], name[11], start_value[7], timeactive[6], fname[25], fsize[9], fdata[100000];
-    sscanf(buffer, "%s %s %s %s %s %s %s %s\n", uid, password, name, start_value, timeactive, fname, fsize, fdata);
+    char uid[7], password[9], name[11], start_value[7], timeactive[6], fname[26], fsize[9], fdata[100000];
+    if (sscanf(buffer, "%6s %8s %10s %6s %5s %25s %8s",
+               uid, password, name, start_value, timeactive, fname, fsize) != 7) {
+        printf("Error parsing parameters\n");
+        
+    }
+    // Find the position of Fdata in the input string
+    int dataSize = atoi(fsize);
+
+    // Ensure dataSize is within the bounds of fdata
+    if (dataSize >= 0 && dataSize < (int)sizeof(fdata)) {
+        // Copy the remaining part to fdata
+        strncpy(fdata, buffer + strlen(buffer) - (dataSize+1), dataSize);
+        fdata[dataSize] = '\0';  // Null-terminate fdata
+    }
     sprintf(path, "USERS/%s", uid);
     stat(path, &stats);
     char start_data[100];
-    char start_datetime[4]="HHMM", start_fulltime[4]="323";
 
     if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
         // existe, temos de ver se o login já está feito
@@ -486,22 +501,38 @@ void open_cmd(char buffer[]){
             char message[12];
             FILE *fp, *fp_asset;
             char start_name[30], asset_path[50];
+            char start_datetime[20], start_fulltime[20];
+            time_t currentTime;
             sprintf(start_name, "AUCTIONS/%03d/START_%03d.txt", auctions_count, auctions_count);
             fp=fopen(start_name, "w");
             if(fp==NULL){
                 puts("fp");
             }
-            sprintf(start_data, "%s %s %s %s %s %s %s", uid, name, fname, start_value, timeactive, start_datetime, start_fulltime);
+            getCurrentTime(start_datetime);
+            
+            time(&currentTime);
 
+            // Converter o tempo para uma string formatada
+            sprintf(start_fulltime, "%ld", currentTime);
+            sprintf(start_data, "%s %s %s %s %s %s %s", uid, name, fname, start_value, timeactive, start_datetime, start_fulltime);
+            size_t error=-1;
             // aqui supostamente fazia o file START E DEPOIS AINDA FALTA O DO ASSET MM
-            if(fwrite(start_data, 1, strlen(start_data),fp) == -1){
-                puts("nop");
+            if(fwrite(start_data, 1, strlen(start_data),fp) == error){
+                send_reply_tcp("ROA ERR\n");
+                return;
             }
             fclose(fp);
             sprintf(asset_path, "AUCTIONS/%03d/ASSET/%s", auctions_count, fname);
             fp_asset=fopen(asset_path, "w");
             if(fp_asset==NULL){
                 puts("fp_asset");
+                send_reply_tcp("ROA ERR\n");
+                return;
+            }
+            printf("data:::%s\tsize:::%s\n", fdata, fsize);
+            if(fwrite(fdata, 1, dataSize,fp_asset) == error){
+                send_reply_tcp("ROA ERR\n");
+                return;
             }
             fclose(fp_asset);
             //depois temos de fazer tbm o asset file com o fname e la dentro a fdata algo assim:
@@ -529,18 +560,12 @@ void tcp_message(char buffer[]){
         send_reply_udp("ERR\n", 5);
     } 
     for (size_t i = 0; i < sizeof(cmds_tcp) / sizeof(cmds_tcp[0]); i++) {
-        puts("comparing");
-        puts(cmds_tcp[i]);
-        puts(command);
         if(strncmp(cmds_tcp[i], command, 3)==0){
             switch (i) {
                 case 0: //open
-                    puts("open case");
                     if(verify_login_input(buffer)){
-                        puts("login ok");
                         open_cmd(buffer + 4);
                     }else{
-                        puts("login not ok");
                         send_reply_tcp("ERR\n");
                     }// ou NOK ou assim tenho de ver
                     
@@ -619,6 +644,7 @@ void tcp_setup(){
         perror("listen");
         exit(1);
     }
+    auctions_count = countAuctionDirectories("AUCTIONS");
 }
 
 void server() {
@@ -653,7 +679,7 @@ void server() {
         if (FD_ISSET(tcp_fd, &all_fds_read)) {
             struct sockaddr_in client_addr;
             socklen_t client_addrlen = sizeof(client_addr);
-            int tcp_socket = accept(tcp_fd, (struct sockaddr*)&client_addr, &client_addrlen);
+            tcp_socket = accept(tcp_fd, (struct sockaddr*)&client_addr, &client_addrlen);
             
             if (tcp_socket == -1) {
                 perror("accept");
