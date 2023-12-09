@@ -311,7 +311,63 @@ void unregister_cmd(char uid[], char password[]){
 }
 
 void myauctions_cmd(char uid[]){
-    send_reply_udp("RMA TEST\n", 10);
+    struct stat stats;
+    char path[13], auctions_path[28], uid_auction[7], myauctions[6000], auction_aux[8], message[6008];
+    sprintf(path, "USERS/%s", uid);
+    stat(path, &stats);
+
+    if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
+        // existe, temos de ver se o login já está feito
+
+        char login_name[35];
+        char pass_name[35];
+        sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        
+        if (access(login_name, F_OK) == -1){ // login nao está feito
+            send_reply_udp("RMA NLG\n", 9);
+            return;
+            
+        } 
+        
+    } 
+    else { // user nao existe 
+        send_reply_udp("RMA ERR\n", 9);
+        return;   
+    }
+    for(int i =1; i<auctions_count;i++){
+        memset(auctions_path, '\0', sizeof(auctions_path));
+        sprintf(auctions_path, "AUCTIONS/%03d/START_%03d.txt", i, i);
+        FILE *fp;
+        fp = fopen(auctions_path, "r");
+        fseek(fp, 0, SEEK_SET);
+        puts("memset:");
+        memset(uid_auction, '0', 7);
+        puts("will read");
+        fread(uid_auction, 7, 1, fp);
+        puts(uid_auction);
+        puts(uid);
+        if(!(strcmp(uid_auction, uid))){
+            puts("same uid");
+            memset(auctions_path, '\0', sizeof(auctions_path));
+            sprintf(auctions_path, "AUCTIONS/%03d/END_%03d.txt", i, i);
+            puts("will see if it has ended");
+            if (access(auctions_path, F_OK) == -1){  //nao ta terminada ainda
+                puts("not ended");
+                sprintf(auction_aux, "%03d\t1\t", i);
+                strcat(myauctions, auction_aux);
+            } else {
+                sprintf(auction_aux, "%03d\t0\t", i);
+                strcat(myauctions, auction_aux);
+            }
+               
+            //a auction com este uid interessa-me
+        }
+        fclose(fp);
+    }
+
+    sprintf(message, "RMA OK %s\n", myauctions);
+    send_reply_udp(message, 6000);
+
 }
 
 void mybids_cmd(char uid[]){
