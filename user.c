@@ -224,7 +224,6 @@ void translate_answer(char buffer[]){
                     if(analyse_answer("NOK",buffer)){
                         write_answer("auction could not be started\n");
                     }else if(analyse_answer("OK", buffer)){
-                        printf("msg recebida do server depois de fazer open: %s\n", buffer);
                         char command[4], answer[4], aid[4], message[34];
                         memset(message, 0, sizeof(message));
                         sscanf(buffer, "%s %s %s", command, answer, aid);
@@ -332,6 +331,7 @@ void communication_tcp(char buffer[]){
     char buffer3[1000000];
     memset(buffer3, 0, sizeof(buffer3));
     while(n != 0) {
+        memset(buffer2, 0, sizeof(buffer2));
         n=read(fd, buffer2, 5000);
         strcat(buffer3, buffer2);
     }
@@ -339,6 +339,7 @@ void communication_tcp(char buffer[]){
         puts("Error reading from server.");
         exit(1);
     }
+    puts(buffer3);
     for(int i=0; i<3; i++){
         cmd_rcv[i]=buffer3[i];
     }

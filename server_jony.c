@@ -315,6 +315,7 @@ void myauctions_cmd(char uid[]){
     char path[13], auctions_path[28], uid_auction[7], myauctions[6000], auction_aux[8], message[6008];
     sprintf(path, "USERS/%s", uid);
     stat(path, &stats);
+    int found=0;
 
     if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
         // existe, temos de ver se o login já está feito
@@ -340,23 +341,20 @@ void myauctions_cmd(char uid[]){
         FILE *fp;
         fp = fopen(auctions_path, "r");
         fseek(fp, 0, SEEK_SET);
-        puts("memset:");
-        memset(uid_auction, '0', 7);
-        puts("will read");
-        fread(uid_auction, 7, 1, fp);
-        puts(uid_auction);
-        puts(uid);
+        memset(uid_auction, '\0', 7);
+        fread(uid_auction, 6, 1, fp);
+        int on=0;
         if(!(strcmp(uid_auction, uid))){
-            puts("same uid");
+            found++;
             memset(auctions_path, '\0', sizeof(auctions_path));
             sprintf(auctions_path, "AUCTIONS/%03d/END_%03d.txt", i, i);
-            puts("will see if it has ended");
             if (access(auctions_path, F_OK) == -1){  //nao ta terminada ainda
-                puts("not ended");
-                sprintf(auction_aux, "%03d\t1\t", i);
+                on = 1;
+                sprintf(auction_aux, "%03d %d ", i, on);
                 strcat(myauctions, auction_aux);
             } else {
-                sprintf(auction_aux, "%03d\t0\t", i);
+                on = 0;
+                sprintf(auction_aux, "%03d %d ", i, on);
                 strcat(myauctions, auction_aux);
             }
                
@@ -364,9 +362,14 @@ void myauctions_cmd(char uid[]){
         }
         fclose(fp);
     }
-
-    sprintf(message, "RMA OK %s\n", myauctions);
-    send_reply_udp(message, 6000);
+    if(found){
+        sprintf(message, "RMA OK %s\n", myauctions);
+        printf("message:::%s", message);
+        send_reply_udp(message, 6000);
+    }else{
+        send_reply_udp("RMA NOK\n", 10);
+    }
+    
 
 }
 
