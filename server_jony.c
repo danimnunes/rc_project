@@ -412,8 +412,56 @@ void mybids_cmd(char uid[]){
     send_reply_udp("RMB TEST\n", 10);
 }
 
-void list_cmd(){
-    send_reply_udp("RLS TEST\n", 10);
+void list_cmd() {
+    char auctions_path[50], aid[7], all_auctions[6000], auction_aux[50], message[6008];
+    int found = 0;
+
+    char auctions_dirname[10] = "AUCTIONS"; // Diretório das auctions, ajuste conforme necessário
+
+    // Abra o diretório AUCTIONS
+    DIR *dir = opendir(auctions_dirname);
+    if (dir == NULL) {
+        perror("Erro ao abrir o diretório AUCTIONS");
+        return;
+    }
+
+    // Variável para armazenar informações sobre os arquivos
+    struct dirent *entry;
+
+    // Loop while para percorrer os arquivos
+    while ((entry = readdir(dir)) != NULL) {
+        // Ignora os diretórios '.' e '..'
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+
+            if (sscanf(entry->d_name, "%3s.txt", aid) == 1) {
+                sprintf(auctions_path, "AUCTIONS/%s/END_%s.txt", aid, aid);
+                found = 1;
+                int on = 0;
+                if (access(auctions_path, F_OK) == -1){  //nao ta terminada ainda
+                    on = 1;
+                    sprintf(auction_aux, "%3s %d ", aid, on);
+                    strcat(all_auctions, auction_aux);
+                } else {
+                    on = 0;
+                    sprintf(auction_aux, "%3s %d ", aid, on);
+                    strcat(all_auctions, auction_aux);
+                }
+            } else {
+                printf("Formato de arquivo inválido: %s\n", entry->d_name);
+            }
+        }
+    }
+
+    // Fecha o diretório
+    closedir(dir);
+
+    if (found) {
+        sprintf(message, "RMA OK %s\n", all_auctions);
+        printf("message:::%s", message);
+        send_reply_udp(message, 6000); 
+    } else {
+        send_reply_udp("RMA NOK\n", 10); 
+    }
 }
 
 void showrecord_cmd(char aid[]){
