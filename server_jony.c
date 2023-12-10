@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include "aux.h"
 #include <time.h>
+#include <dirent.h>
 
 
 #define PORT "58011"
@@ -80,6 +81,9 @@ int create_first_Login(char *uid, char *password){
     }
     fprintf(fp_pass, "%s", password);
 
+    
+    
+
 
     fclose(fp);
     fclose(fp_pass);
@@ -100,7 +104,7 @@ int eraseLogin(char *uid){
 
 int registerUid(char *uid, char *password){
     uid[strcspn(uid, "\n")] = 0;
-    char login_name[35], pass_name[35];
+    char login_name[35], pass_name[35], hosted_dirname[35], bidded_dirname[35];
     char uid_dirname[17];
     int ret;
     FILE *fp, *fp_pass;
@@ -114,6 +118,20 @@ int registerUid(char *uid, char *password){
     ret = mkdir(uid_dirname, 0700);
     if(ret == -1){
         puts("mkdir1");
+        return 0;
+    }
+
+    sprintf(hosted_dirname, "USERS/%s/HOSTED", uid);
+    ret = mkdir(hosted_dirname, 0700);
+    if(ret == -1){
+        puts("mkdir HOSTED");
+        return 0;
+    }
+
+    sprintf(bidded_dirname, "USERS/%s/BIDDED", uid);
+    ret = mkdir(bidded_dirname, 0700);
+    if(ret == -1){
+        puts("mkdir BIDDED");
         return 0;
     }
 
@@ -312,7 +330,7 @@ void unregister_cmd(char uid[], char password[]){
 
 void myauctions_cmd(char uid[]){
     struct stat stats;
-    char path[13], auctions_path[28], uid_auction[7], myauctions[6000], auction_aux[8], message[6008];
+    char path[13], auctions_path[50], uid_auction[7], myauctions[6000], auction_aux[50], message[6008];
     sprintf(path, "USERS/%s", uid);
     stat(path, &stats);
     int found=0;
@@ -335,33 +353,50 @@ void myauctions_cmd(char uid[]){
         send_reply_udp("RMA ERR\n", 9);
         return;   
     }
-    for(int i =1; i<auctions_count;i++){
-        memset(auctions_path, '\0', sizeof(auctions_path));
-        sprintf(auctions_path, "AUCTIONS/%03d/START_%03d.txt", i, i);
-        FILE *fp;
-        fp = fopen(auctions_path, "r");
-        fseek(fp, 0, SEEK_SET);
-        memset(uid_auction, '\0', 7);
-        fread(uid_auction, 6, 1, fp);
-        int on=0;
-        if(!(strcmp(uid_auction, uid))){
-            found++;
-            memset(auctions_path, '\0', sizeof(auctions_path));
-            sprintf(auctions_path, "AUCTIONS/%03d/END_%03d.txt", i, i);
-            if (access(auctions_path, F_OK) == -1){  //nao ta terminada ainda
-                on = 1;
-                sprintf(auction_aux, "%03d %d ", i, on);
-                strcat(myauctions, auction_aux);
-            } else {
-                on = 0;
-                sprintf(auction_aux, "%03d %d ", i, on);
-                strcat(myauctions, auction_aux);
-            }
-               
-            //a auction com este uid interessa-me
-        }
-        fclose(fp);
+
+
+    char hosted_dirname[50];
+    sprintf(hosted_dirname, "USERS/%s/HOSTED", uid);
+
+    // Abra o diretório HOSTED
+    DIR *dir = opendir(hosted_dirname);
+    if (dir == NULL) {
+        perror("Erro ao abrir o diretório HOSTED");
+        return;
     }
+
+    // Variável para armazenar informações sobre os arquivos
+    struct dirent *entry;
+
+    // Loop while para percorrer os arquivos
+    while ((entry = readdir(dir)) != NULL) {
+        // Ignora os diretórios '.' e '..'
+        if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+            
+            if (sscanf(entry->d_name, "%3s.txt", uid_auction) == 1) {
+                sprintf(auctions_path, "AUCTIONS/%s/END_%s.txt", uid_auction, uid_auction);
+                found = 1;
+                int on = 0;
+                if (access(auctions_path, F_OK) == -1){  //nao ta terminada ainda
+                    on = 1;
+                    sprintf(auction_aux, "%3s %d ", uid_auction, on);
+                    strcat(myauctions, auction_aux);
+                } else {
+                    on = 0;
+                    sprintf(auction_aux, "%3s %d ", uid_auction, on);
+                    strcat(myauctions, auction_aux);
+                }
+            } else {
+                printf("Formato de arquivo inválido: %s\n", entry->d_name);
+            }
+        }
+    }
+
+    // Fecha o diretório
+    closedir(dir);     
+               
+           
+
     if(found){
         sprintf(message, "RMA OK %s\n", myauctions);
         printf("message:::%s", message);
@@ -559,7 +594,7 @@ void open_cmd(char buffer[]){
         if(createAuction(++auctions_count, fdata, fsize, start_data)){ //criamos a pasta auctions/bids e asset agr temos de por la o ex: START_001.txt e o Picasso_01.jpg
             char message[12];
             FILE *fp, *fp_asset;
-            char start_name[30], asset_path[50];
+            char start_name[30], asset_path[50], hosted_name[30];
             char start_datetime[20], start_fulltime[20];
             time_t currentTime;
             sprintf(start_name, "AUCTIONS/%03d/START_%03d.txt", auctions_count, auctions_count);
@@ -593,6 +628,16 @@ void open_cmd(char buffer[]){
                 send_reply_tcp("ROA ERR\n");
                 return;
             }
+
+
+            sprintf(hosted_name, "USERS/%s/HOSTED/%03d.txt", uid, auctions_count);
+            fp=fopen(hosted_name, "w");
+            if(fp==NULL){
+                puts("fp");
+            }
+
+
+
             fclose(fp_asset);
             //depois temos de fazer tbm o asset file com o fname e la dentro a fdata algo assim:
             //fwrite(fdata, 1, fsize, fp_do_ficheiro);
