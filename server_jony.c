@@ -401,6 +401,7 @@ void myauctions_cmd(char uid[]){
         sprintf(message, "RMA OK %s\n", myauctions);
         printf("message:::%s", message);
         send_reply_udp(message, 6000);
+        memset(myauctions, 0, sizeof(myauctions));
     }else{
         send_reply_udp("RMA NOK\n", 10);
     }
@@ -459,6 +460,7 @@ void list_cmd() {
         sprintf(message, "RMA OK %s\n", all_auctions);
         printf("message:::%s", message);
         send_reply_udp(message, 6000); 
+        memset(all_auctions, 0, sizeof(all_auctions));
     } else {
         send_reply_udp("RMA NOK\n", 10); 
     }
@@ -912,3 +914,4 @@ int main(int argc, char *argv[]) {
     server();
     return 0;
 }
+
