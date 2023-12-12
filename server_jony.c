@@ -524,8 +524,27 @@ void send_reply_tcp(char buffer[]){
         perror("Error writing to server");
         exit(1);
     }
-
-
+}
+void send_reply_asset(int fsize, char fname[], char aid[]){
+    char buffer[128], asset_path[36];
+    FILE *fp;
+    sprintf(asset_path, "AUCTIONS/%3s/ASSET/%s", aid, fname);
+    if((fp=fopen(asset_path, "r"))==NULL){
+        n = write(tcp_socket, "ERR\n", 4);
+    }
+    sprintf(buffer, "RSA OK %s %d ", fname, fsize);
+    write(tcp_socket, buffer, strlen(buffer));
+    if (n == -1) {
+        perror("Error writing to server");
+        exit(1);
+    }
+    while(fread(buffer, 1, 128, fp)>0){
+        n = write(tcp_socket, buffer, 128);
+        if (n == -1) {
+            perror("Error writing to server");
+            exit(1);
+        }
+    }
 }
 
 
@@ -740,7 +759,40 @@ void close_cmd(char buffer[]){
     }
 }
 
-void showasset_cmd(char buffer[]){}
+void showasset_cmd(char buffer[]){
+    char aid[4];
+    char auction_dirpath[13];
+    struct stat stats;
+    sscanf(buffer, "%*s %s", aid);
+    sprintf(auction_dirpath, "AUCTIONS/%3s", aid);
+    stat(auction_dirpath, &stats);
+
+    if (S_ISDIR(stats.st_mode)){
+        char asset_info_path[27], content[37], fname[25];
+        FILE *fp;
+        int fsize = 0;
+        sprintf(asset_info_path, "AUCTIONS/%3s/START_%3s.txt", aid, aid);
+        fp = fopen(asset_info_path, "r");
+        if(fp == NULL){
+            send_reply_tcp("ERR\n");
+            return;
+        }
+        fseek(fp, 7, SEEK_SET);
+        if(!fread(content, 1, 37, fp)){
+            send_reply_tcp("ERR\n");
+            return;
+        }
+        sscanf(content, "%*s %s", fname);
+        if((fsize = checkAssetFile(fname))!=0){
+            send_reply_asset(fsize, fname, aid);
+            fclose(fp);
+            return;
+        }
+        fclose(fp);
+    } 
+    send_reply_tcp("RSA NOK\n");
+    
+}
 
 void bid_cmd(char buffer[]){}
 
@@ -764,7 +816,7 @@ void tcp_message(char buffer[]){
                     return;
                 case 1: //close
                     if(verify_logout_input(buffer)){
-                        close_cmd(buffer+3);
+                        close_cmd(buffer+4);
                     }else{
                         send_reply_udp("ERR\n", 5);
                     }// ou NOK ou assim tenho de ver

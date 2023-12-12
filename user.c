@@ -289,6 +289,26 @@ void translate_answer(char buffer[]){
     }
 
 }
+/*
+void receive_asset(){
+    char buffer[128];
+    read(tcp_)
+    sscanf(buffer, "%s %s", cmd, status);
+    if(strcmp(cmd, "RSA")!=0){
+        puts("Something went wrong communicating with server");
+    }
+    if(strcmp(status, "NOK")){
+        write_answer("no file to be sent, or some other problem\n");
+    }
+    while(fread(buffer, 1, 128, fp)>0){
+        n = write(tcp_socket, buffer, 128);
+        if (n == -1) {
+            perror("Error writing to server");
+            exit(1);
+        }
+    }
+}*/
+
 
 void communication_tcp(char buffer[]){
     char buffer2[5000];
@@ -326,7 +346,6 @@ void communication_tcp(char buffer[]){
         puts("Error writing to server.");
         exit(1);
     }
-
     /* Lê 128 Bytes do servidor e guarda-os no buffer. */
     char buffer3[1000000];
     memset(buffer3, 0, sizeof(buffer3));
@@ -339,7 +358,6 @@ void communication_tcp(char buffer[]){
         puts("Error reading from server.");
         exit(1);
     }
-    puts(buffer3);
     for(int i=0; i<3; i++){
         cmd_rcv[i]=buffer3[i];
     }

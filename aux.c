@@ -190,7 +190,7 @@ int verify_open_input(char name[], char start_value[], char time_active[]){
         return 0;
     }
     for (size_t i=0; i<strlen(name);i++){
-        if(!isdigit(name[i]) && !isalpha(name[i]) && name[i]!='_' && name[i]!='-'){
+        if(!isdigit(name[i]) && !isalpha(name[i]) && name[i]!='_' && name[i]!='-' && name[i]!='.'){
             printf("Invalid input: name is alphanumeric\n");
             return 0;
         }
