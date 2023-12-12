@@ -169,27 +169,7 @@ int checkAssetFile(char *fname){
 }
 
 
-// funcao para ver se a pass que esta no _pass.txt é a mesma introduzida pelo user
-int uid_pass_match(char uid[], char password[]){
-    char pass_name[35], pass_registered[10];
-    FILE *fp;
-    int size=0;
 
-    sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
-    fp=fopen(pass_name, "r");
-    fseek (fp, 0, SEEK_END);
-    size = ftell(fp);
-    if (size == 0) {
-
-        return 0;
-    }
-    fseek (fp, 0, SEEK_SET);
-    fgets(pass_registered, 10, fp);
-
-
-    return !strcmp(pass_registered, password);
-
-}
 
 
 
@@ -538,7 +518,7 @@ void udp_message(char buffer[]){
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 void send_reply_tcp(char buffer[]){
-    printf("Buffer contents: %s\n", buffer);
+    printf("Buffer contents:: %s\n", buffer);
     n = write(tcp_socket, buffer, strlen(buffer));
     if (n == -1) {
         perror("Error writing to server");
@@ -660,7 +640,6 @@ void open_cmd(char buffer[]){
             sprintf(start_fulltime, "%ld", currentTime);
             sprintf(start_data, "%s %s %s %s %s %s %s", uid, name, fname, start_value, timeactive, start_datetime, start_fulltime);
             size_t error=-1;
-            // aqui supostamente fazia o file START E DEPOIS AINDA FALTA O DO ASSET MM
             if(fwrite(start_data, 1, strlen(start_data),fp) == error){
                 send_reply_tcp("ROA ERR\n");
                 return;
@@ -673,7 +652,6 @@ void open_cmd(char buffer[]){
                 send_reply_tcp("ROA ERR\n");
                 return;
             }
-            printf("data:::%s\tsize:::%s\n", fdata, fsize);
             if(fwrite(fdata, 1, dataSize,fp_asset) == error){
                 send_reply_tcp("ROA ERR\n");
                 return;
@@ -700,7 +678,67 @@ void open_cmd(char buffer[]){
 
 }
 
-void close_cmd(char buffer[]){}
+void close_cmd(char buffer[]){
+    char uid[7], password[9], aid[4];
+    sscanf(buffer, "%s %s %s\n", uid, password, aid);
+    int answer = 2;
+    if((answer=check_user_loggedin(uid, password))==0) {
+        send_reply_tcp("RCL NLG\n");
+        return;
+    } else if (answer==-1){
+        send_reply_tcp("RCL NOK\n");
+        return;
+    } else if (answer == 1){
+        
+        char auction_dirpath[15];
+        struct stat stats;
+        sprintf(auction_dirpath, "AUCTIONS/%3s", aid);
+        stat(auction_dirpath, &stats);
+
+        if (S_ISDIR(stats.st_mode)){
+            char end_path[25];
+            char end_datetime[20], end_fulltime[20];
+            time_t currentTime;
+            char end_content[41];
+            char hosted_dirname[30];
+            sprintf(hosted_dirname, "USERS/%6s/HOSTED/%3s.txt", uid, aid);
+            if(access(hosted_dirname, F_OK)==-1){ //nao pertence a este uid
+                send_reply_tcp("RCL EOW\n");
+                return;
+            }
+            sprintf(end_path, "AUCTIONS/%3s/END_%3s.txt", aid, aid);
+            if(access(end_path, F_OK)==-1){ //nao esta terminada ainda
+                FILE *fp;
+                fp = fopen(end_path, "w");
+                if(fp == NULL){
+                    send_reply_tcp("ERR\n");
+                }
+                
+                getCurrentTime(end_datetime);
+                
+                time(&currentTime);
+
+                // Converter o tempo para uma string formatada
+                sprintf(end_fulltime, "%ld", currentTime);
+                sprintf(end_content, "%s %s", end_datetime, end_fulltime);
+                if(fwrite(end_content, 1, strlen(end_content), fp)>0){
+                    send_reply_tcp("RCL OK\n");
+                    fclose(fp);
+                    return;
+                }
+                fclose(fp);
+            } else {
+                send_reply_tcp("RCL END\n");
+                return;
+            }
+            
+        } else { //a diretoria com o aid nao existe
+            send_reply_tcp("RCL EAU\n");
+            return;
+        }
+        send_reply_tcp("ERR\n");
+    }
+}
 
 void showasset_cmd(char buffer[]){}
 
@@ -726,7 +764,7 @@ void tcp_message(char buffer[]){
                     return;
                 case 1: //close
                     if(verify_logout_input(buffer)){
-                        close_cmd(buffer);
+                        close_cmd(buffer+3);
                     }else{
                         send_reply_udp("ERR\n", 5);
                     }// ou NOK ou assim tenho de ver

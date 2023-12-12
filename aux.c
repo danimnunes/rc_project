@@ -5,6 +5,10 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 
 void getCurrentTime(char timestr[20]) {
     time_t fulltime;
@@ -110,7 +114,57 @@ int verify_logout_input(char buffer[]){
     return verify_uid(uid);;
 }
 
+// funcao para ver se a pass que esta no _pass.txt é a mesma introduzida pelo user
+int uid_pass_match(char uid[], char password[]){
+    char pass_name[35], pass_registered[10];
+    FILE *fp;
+    int size=0;
 
+    sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+    fp=fopen(pass_name, "r");
+    fseek (fp, 0, SEEK_END);
+    size = ftell(fp);
+    if (size == 0) {
+
+        return 0;
+    }
+    fseek (fp, 0, SEEK_SET);
+    fgets(pass_registered, 10, fp);
+
+
+    return !strcmp(pass_registered, password);
+
+}
+
+int check_user_loggedin(char uid[], char password[]){
+    struct stat stats;
+    char path[15];
+    sprintf(path, "USERS/%6s", uid);
+    stat(path, &stats);
+
+    if (S_ISDIR(stats.st_mode)){ //ver se a diretoria com do uid existe
+        // existe, temos de ver se o login já está feito
+        char login_name[35];
+        char pass_name[35];
+        sprintf(login_name, "USERS/%s/%s_login.txt", uid, uid);
+        sprintf(pass_name, "USERS/%s/%s_pass.txt", uid, uid);
+
+        if (access(pass_name, F_OK) == -1){  // caso em que a diretoria existe mas não há ficheiro passe porque foi feito unregister antes
+            return -1; //NOK
+        }
+        if(!uid_pass_match(uid, password)){
+            return -1; //NOK
+        }
+        //chegou aqui ta tudo ok
+        if(access(login_name, F_OK)==-1){   
+            return 0; //NLG
+        }
+    } else {
+        return -1; // NOK, nao existe o UID
+    }
+    //tudo ok
+    return 1; 
+}
 
 
 int verify_aid(char buffer[]){
@@ -136,7 +190,7 @@ int verify_open_input(char name[], char start_value[], char time_active[]){
         return 0;
     }
     for (size_t i=0; i<strlen(name);i++){
-        if(!isdigit(name[i]) && !isalpha(name[i])){
+        if(!isdigit(name[i]) && !isalpha(name[i]) && name[i]!='_' && name[i]!='-'){
             printf("Invalid input: name is alphanumeric\n");
             return 0;
         }
